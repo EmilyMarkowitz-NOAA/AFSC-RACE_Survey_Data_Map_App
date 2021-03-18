@@ -4,18 +4,19 @@ rm(list = ls())
 
 ##########SOURCE DATA####################
 source("reference.R") # Universal Documents
-source("data.R") # Universal Documents
 source("functions.R") # App-specific files
+source("data.R") # Universal Documents
 ### ui code (lists, instructions, etc) used in multiple tabs
 # source(file.path("ui_files", "ui_common.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 # source(file.path("ui_files", "ui_functions.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 
 
 ### ui code parsed by tabName
-source(file.path("ui_files", "ui_roadmap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 source(file.path("ui_files", "ui_import.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_calculator.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_plots.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_roadmap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_surveymap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+# source(file.path("ui_files", "ui_calculator.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+# source(file.path("ui_files", "ui_plots.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 source(file.path("ui_files", "ui_licencing.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 source(file.path("ui_files", "ui_manual.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 # source(file.path("ui_files", "ui_login.R"), local = TRUE, echo = FALSE, chdir = TRUE)
@@ -114,7 +115,7 @@ ui <- tagList(
                            
                            tags$li(class = "dropdown", 
                                    tags$a(icon("github"), 
-                                          href = "https://github.com/emilyhmarkowitz/ShinyTemplateNMFS",
+                                          href = "https://github.com/EmilyMarkowitz-NOAA/AFSCRACE_SurveyDataMapApp",
                                           title = "See the code on github", 
                                           style = "color: #1f93d0;"))
                            ), 
@@ -137,16 +138,17 @@ ui <- tagList(
     
     sidebarMenu(
       id = "tabs",
-      # menuItem(HTML(paste0("Welcome")),
-      #          tabName = "welcome", icon = icon("address-card")), #icon("sitemap")
-      menuItem(HTML(paste0("Roadmap")),
-               tabName = "roadmap", icon = icon("road")), #icon("sitemap")
-      menuItem("Import Data", 
-               tabName = "import", icon = icon("cloud-upload")),
-      menuItem("Calculator", 
-               tabName = "calculator", icon = icon("cogs")),
-      menuItem("Plots", 
-               tabName = "plots", icon = icon("file-image-o")),
+      menuItem("Survey Map", 
+               tabName = "surveymap", 
+               icon = icon("file-image-o")), # icon = icon("file-image-o")),
+      menuItem(HTML(paste0("Welcome")),
+               tabName = "welcome", icon = icon("address-card")), #icon("sitemap")
+      # menuItem(HTML(paste0("Roadmap")),
+      #          tabName = "roadmap", icon = icon("road")), #icon("sitemap")
+      # menuItem("Import Data", 
+      #          tabName = "import", icon = icon("cloud-upload")),
+      # menuItem("Calculator", 
+      #          tabName = "calculator", icon = icon("cogs")),
       menuItem("Licencing", 
                tabName = "licencing", icon = icon("list-alt")),
       menuItem("Manual", 
@@ -260,11 +262,12 @@ ui <- tagList(
     #     tabName = "welcome"#, 
     #     uiOutput("ui.welcome")
     #     ),
+      ui.surveymap(),     # Welcome
       # ui.welcome(),     # Welcome
-      ui.plots(),        # High Quality Maps
       ui.roadmap(),      # Roadmap
-      ui.import(),       # Import Data
-      ui.calculator(),   # Evaluation Metrics
+      # ui.plots(),        # High Quality Maps
+      # ui.import(),       # Import Data
+      # ui.calculator(),   # Evaluation Metrics
       ui.licencing(),       # Export Predictions
       ui.manual()        # Manual
     )
@@ -385,29 +388,141 @@ server <- function(input, output, session) {
   ########* Plots###########
   
   
-  points <- eventReactive(input$recalc, {
-    # cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-    dat_cpue %>% dplyr::select("longitude", "latitude")
+  # points <- eventReactive(input$recalc, {
+  #   # cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  #   a <- dat_cpue %>% dplyr::select("longitude", "latitude") 
+  #   a[1:20,]
+  # }, ignoreNULL = FALSE)
+  # 
+  # output$mymap <- renderLeaflet({
+  #   leaflet() %>%
+  #     addProviderTiles(providers$Stamen.TonerLite,
+  #                      options = providerTileOptions(noWrap = TRUE)
+  #     ) %>%
+  #     addMarkers(data = points())
+  # })
+  # 
+  
+  # datasetInput <- reactive({
+  #   switch(input$dataset,
+  #          "faithful" = faithful,
+  #          "pressure" = pressure,
+  #          "cars" = cars)
+  # })
+  
+  #######* Survey Map############
+  ## create static element
+  output$my_leaf <- renderLeaflet({
+    # e <- df_filtered()
+    # df_filtered <- reactive({
+    # df[df$value >= input$slider, ]
+    e <- df0 %>%
+      dplyr::filter(year == input$year &
+                      common_name == input$spp)
+    if (input$survey != "All") {
+      e <- e %>%
+        dplyr::filter(survey %in% input$survey)
+    }
     
-  }, ignoreNULL = FALSE)
-  
-  output$mymap <- renderLeaflet({
-    leaflet() %>%
-      addProviderTiles(providers$Stamen.TonerLite,
-                       options = providerTileOptions(noWrap = TRUE)
-      ) %>%
-      addMarkers(data = points())
+    a <- leaflet() %>%
+      addTiles() %>%
+      setView(lat = 59.22, lng = -158.8, zoom = 4) 
+    
+    # ADD STRATUM POLYGON?
+    if (input$stratum) {
+      if (input$survey == "All") {
+        a <- a %>%
+          addPolygons(data = bs_shp, 
+                      weight = 1, 
+                      color = "grey50", 
+                      opacity = 0.5)
+      } else if (input$survey == "NBS") {
+        a <- a %>%
+          addPolygons(data = nbs_shp, 
+                      weight = 1, 
+                      color = "grey50", 
+                      opacity = 0.5)
+      } else if (input$survey == "EBS") {
+        a <- a %>%
+          addPolygons(data = ebs_shp, 
+                      weight = 1, 
+                      color = "grey50", 
+                      opacity = 0.5)
+      }
+    }
+    
+    # ADD STATION POINTS?
+    if (input$stat_points) {
+      a <- a %>%
+        # %>%
+        addCircleMarkers(
+          data = e, 
+          lng = e$longitude,
+          lat = e$latitude,               
+          radius = 1, 
+          color = nmfspalette::nmfs_palette(palette = "urchin")(1),
+          stroke = FALSE, 
+          fillOpacity = 0.5) #%>%
+      # addLegend("bottomright", 
+      #           pal = nmfspalette::nmfs_palette(palette = "urchin")(1), 
+      #           values = 0,
+      #           title = paste0("Stations with 0 CPUE (", input$cpue_unit, ")"),
+      #           # labFormat = labelFormat(prefix = "$"),
+      #           opacity = 1)
+    }
+    
+    # ADD SIZED CPUE?
+    if (input$cpue_unit != "None" & input$cpue_points) {
+      b <- e[e[,input$cpue_unit] > 0,]
+      # b <- e
+      # b[is.infinite(b[,input$cpue_unit]),input$cpue_unit] <- 0
+      # b <- b[b[,input$cpue_unit] > 0,]
+      
+      a <- a %>%
+        addCircleMarkers(
+          data = b,
+          lng = b$longitude,
+          lat = b$latitude,
+          radius = ~ (scale_values(as.numeric(unlist(b[,input$cpue_unit])))+1)*2,
+          # label = b[,input$cpue_unit], 
+          color = nmfspalette::nmfs_palette(palette = "crustacean")(1),
+          stroke = FALSE,
+          fillOpacity = 0.5
+        )
+    }
+    
+    # ADD IDW
+    if (input$cpue_unit != "None") {
+      b <- e[e[,input$cpue_unit] > 0,]   
+      if (input$heatmap){
+        
+        map_area<-dplyr::case_when(input$survey == "All" ~ "bs.all",
+                                   input$survey == "NBS" ~ "bs.north",
+                                   input$survey == "EBS" ~ "bs.south")
+        
+        spp_idw0 <- akgfmaps::make_idw_map(COMMON_NAME = e$common_name,
+                                           LATITUDE = e$latitude,
+                                           LONGITUDE = e$longitude,
+                                           CPUE_KGHA = as.numeric(unlist(e[,input$cpue_unit])),
+                                           region = map_area,
+                                           set.breaks = "jenks",
+                                           out.crs = "+proj=longlat +datum=WGS84")
+        spp_idw <- spp_idw0$extrapolation.grid
+        
+        a <- a %>%
+          leafem::addStarsImage(x = spp_idw,
+                                colors = nmfspalette::nmfs_palette(palette = "seagrass")(6),
+                                opacity = 0.8) #%>%
+        # addLegend(pal = nmfspalette::nmfs_palette(palette = "seagrass")(6),
+        #           values = (spp_idw),
+        #           title = paste0(input$spp, " (", input$cpue_unit, ")"))
+        
+      }
+    }
+    
+    return(a)
   })
-  
-  
-  
-  
-  datasetInput <- reactive({
-    switch(input$dataset,
-           "faithful" = faithful,
-           "pressure" = pressure,
-           "cars" = cars)
-  })
+
   
   output$table <- renderDataTable(input$datasetInput)
 
