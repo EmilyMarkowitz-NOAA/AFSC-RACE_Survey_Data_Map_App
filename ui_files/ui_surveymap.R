@@ -15,7 +15,7 @@ ui.surveymap <- function() {
           ),
           
           # If not using custom CSS, set height of leafletOutput to a number instead of percent
-          leafletOutput("my_leaf", width="100%", height="100%"),
+          leafletOutput("survey_leaflet", width="100%", height="100%"),
           
           # Shiny versions prior to 0.11 should use class = "modal" instead.
           absolutePanel(id = "controls", 
@@ -26,7 +26,7 @@ ui.surveymap <- function() {
                         bottom = "auto",
                         width = 330, height = "auto",
                         
-                        h2("Focus your search:"),
+                        h2(" "),
                         
                         # sliderInput(inputId = "slider", 
                         #             label = "values",
@@ -41,8 +41,9 @@ ui.surveymap <- function() {
                                     choices = sort(unique(df0$common_name)), 
                                     selected = "Pacific halibut"),
                         selectInput("survey", "Survey:", 
-                                    choices = c("All", sort(unique(df0$survey))), 
-                                    selected = "EBS"),
+                                    choices = c(sort(unique(df0$survey))), 
+                                    selected = c("EBS", "NBS"), 
+                                    multiple = TRUE),
                         selectInput("cpue_unit", "CPUE Unit:", 
                                     choices = c("kg of fish/ha", 
                                                 "number of fish/ha", 
@@ -50,9 +51,13 @@ ui.surveymap <- function() {
                                     selected = "kg of fish/ha"),
                         checkboxInput("stat_points", "Station Points", value = TRUE),
                         checkboxInput("cpue_points", "CPUE Points (only if CPUE Unit is not = None", value = TRUE),
-                        checkboxInput("heatmap", "Inverse Distance Weighting (if available)", value = FALSE),
-                        checkboxInput("stratum", "Stratum", value = TRUE)
-                        # leafletOutput("my_leaf")                                            conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
+                        checkboxInput("cpue_idw", "CPUE IDW", value = FALSE),
+                        checkboxInput("cpue_bt", "Bottom Temperature IDW", value = FALSE),
+                        checkboxInput("stratum", "Stratum", value = TRUE), 
+                        
+                        downloadButton(outputId = "dl_map", label = "Download Map (PNG)")
+                        
+                        # leafletOutput("survey_leaflet")                                            conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
                         # Only prompt for threshold when coloring or sizing by superzip
                         #                  numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
                         # ),

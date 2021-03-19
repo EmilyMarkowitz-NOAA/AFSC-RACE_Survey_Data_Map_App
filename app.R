@@ -1,4 +1,21 @@
+# Q. 
+# NBS and EBS are seperate surveys, so should we be combining data for them togeterh in on e idw?
+## yes
 
+# GOA vs AI vs NBS/EBS
+# change stratum colors to help id the surveys
+# can use same color scheme
+# note that biomass estimates are different between surveys
+
+# GOA/AI cpue data? Where do I find that?
+
+# should these be idws or should they be density plots?
+
+# where can I treat NAs and INF as 0s (cpue)?
+
+# Contact_Electronic_Mail_Address: AFSC.metadata@noaa.gov
+# Bottom temperature
+## make on/off for temperature IDW
 
 rm(list = ls())
 
@@ -12,15 +29,17 @@ source("data.R") # Universal Documents
 
 
 ### ui code parsed by tabName
-source(file.path("ui_files", "ui_import.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_roadmap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_surveymap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-# source(file.path("ui_files", "ui_calculator.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-# source(file.path("ui_files", "ui_plots.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_licencing.R"), local = TRUE, echo = FALSE, chdir = TRUE)
-source(file.path("ui_files", "ui_manual.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 # source(file.path("ui_files", "ui_login.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 # source(file.path("ui_files", "ui_welcome.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+# source(file.path("ui_files", "ui_import.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_surveymap.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_metadata.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_glossary.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_data.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+# source(file.path("ui_files", "ui_calculator.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_plots.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_licencing.R"), local = TRUE, echo = FALSE, chdir = TRUE)
+source(file.path("ui_files", "ui_manual.R"), local = TRUE, echo = FALSE, chdir = TRUE)
 
 
 ##########DEFINE####################
@@ -100,7 +119,7 @@ ui <- tagList(
                              badgeStatus = NULL,
                              headerText = "See also:",
                              # style = "color: #1f93d0;")
-                             notificationItem("shiny", icon = icon("file"), status = "info",
+                             notificationItem("shiny", icon = icon("file"), status = "info", # TOLEDO
                                               href = "http://shiny.rstudio.com/"),
                              notificationItem("shinydashboard", icon = icon("file"), status = "info",
                                               href = "https://rstudio.github.io/shinydashboard/")
@@ -141,10 +160,14 @@ ui <- tagList(
       menuItem("Survey Map", 
                tabName = "surveymap", 
                icon = icon("file-image-o")), # icon = icon("file-image-o")),
-      menuItem(HTML(paste0("Welcome")),
-               tabName = "welcome", icon = icon("address-card")), #icon("sitemap")
-      # menuItem(HTML(paste0("Roadmap")),
-      #          tabName = "roadmap", icon = icon("road")), #icon("sitemap")
+      # menuItem(HTML(paste0("Welcome")),
+      #          tabName = "welcome", icon = icon("address-card")), #icon("sitemap")
+      menuItem(HTML(paste0("Metadata")),
+               tabName = "metadata", icon = icon("cogs")), #icon("sitemap")
+      menuItem(HTML(paste0("Glossary and Literature Cited")),
+               tabName = "glossary", icon = icon("road")), #icon("sitemap")
+      menuItem(HTML(paste0("Download Data")),
+               tabName = "data", icon = icon("road")), #icon("sitemap")
       # menuItem("Import Data", 
       #          tabName = "import", icon = icon("cloud-upload")),
       # menuItem("Calculator", 
@@ -264,8 +287,10 @@ ui <- tagList(
     #     ),
       ui.surveymap(),     # Welcome
       # ui.welcome(),     # Welcome
-      ui.roadmap(),      # Roadmap
-      # ui.plots(),        # High Quality Maps
+      ui.metadata(),      # Roadmap
+      ui.glossary(),      # Roadmap
+      ui.plots(),        # High Quality Maps
+      ui.data(),        # High Quality Maps
       # ui.import(),       # Import Data
       # ui.calculator(),   # Evaluation Metrics
       ui.licencing(),       # Export Predictions
@@ -350,24 +375,7 @@ server <- function(input, output, session) {
   # })
   
   #######* User Specific Welcome##########
-  
-  # output$ui.welcome <- renderUI({
-  #     # req(credentials()$user_auth)
-  #     
-  #     fluidRow(
-  #       column(
-  #         width = 12,
-  #         tags$h2(glue("Your permission level is: {user_info()$permissions}. 
-  #                      Your data is: {ifelse(user_info()$permissions == 'admin', 'Starwars', 'Storms')}.")),
-  #         box(width = NULL, status = "primary",
-  #             title = ifelse(user_info()$permissions == 'admin', "Starwars Data", "Storms Data"),
-  #             DT::renderDT(user_data(), options = list(scrollX = TRUE))
-  #         )
-  #         )
-  #     )
-  # })
-  
-  
+
   #######* Images##########
   output$ImageFull <- renderImage({
     filename <- normalizePath(file.path("./www/noaa_fisheries_small.png"))
@@ -385,161 +393,14 @@ server <- function(input, output, session) {
     )
   }, deleteFile = FALSE)
   
-  ########* Plots###########
-  
-  
-  # points <- eventReactive(input$recalc, {
-  #   # cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  #   a <- dat_cpue %>% dplyr::select("longitude", "latitude") 
-  #   a[1:20,]
-  # }, ignoreNULL = FALSE)
-  # 
-  # output$mymap <- renderLeaflet({
-  #   leaflet() %>%
-  #     addProviderTiles(providers$Stamen.TonerLite,
-  #                      options = providerTileOptions(noWrap = TRUE)
-  #     ) %>%
-  #     addMarkers(data = points())
-  # })
-  # 
-  
-  # datasetInput <- reactive({
-  #   switch(input$dataset,
-  #          "faithful" = faithful,
-  #          "pressure" = pressure,
-  #          "cars" = cars)
-  # })
-  
-  #######* Survey Map############
-  ## create static element
-  output$my_leaf <- renderLeaflet({
-    # e <- df_filtered()
-    # df_filtered <- reactive({
-    # df[df$value >= input$slider, ]
-    e <- df0 %>%
-      dplyr::filter(year == input$year &
-                      common_name == input$spp)
-    if (input$survey != "All") {
-      e <- e %>%
-        dplyr::filter(survey %in% input$survey)
-    }
-    
-    a <- leaflet() %>%
-      addTiles() %>%
-      setView(lat = 59.22, lng = -158.8, zoom = 4) 
-    
-    # ADD STRATUM POLYGON?
-    if (input$stratum) {
-      if (input$survey == "All") {
-        a <- a %>%
-          addPolygons(data = bs_shp, 
-                      weight = 1, 
-                      color = "grey50", 
-                      opacity = 0.5)
-      } else if (input$survey == "NBS") {
-        a <- a %>%
-          addPolygons(data = nbs_shp, 
-                      weight = 1, 
-                      color = "grey50", 
-                      opacity = 0.5)
-      } else if (input$survey == "EBS") {
-        a <- a %>%
-          addPolygons(data = ebs_shp, 
-                      weight = 1, 
-                      color = "grey50", 
-                      opacity = 0.5)
-      }
-    }
-    
-    # ADD STATION POINTS?
-    if (input$stat_points) {
-      a <- a %>%
-        # %>%
-        addCircleMarkers(
-          data = e, 
-          lng = e$longitude,
-          lat = e$latitude,               
-          radius = 1, 
-          color = nmfspalette::nmfs_palette(palette = "urchin")(1),
-          stroke = FALSE, 
-          fillOpacity = 0.5) #%>%
-      # addLegend("bottomright", 
-      #           pal = nmfspalette::nmfs_palette(palette = "urchin")(1), 
-      #           values = 0,
-      #           title = paste0("Stations with 0 CPUE (", input$cpue_unit, ")"),
-      #           # labFormat = labelFormat(prefix = "$"),
-      #           opacity = 1)
-    }
-    
-    # ADD SIZED CPUE?
-    if (input$cpue_unit != "None" & input$cpue_points) {
-      b <- e[e[,input$cpue_unit] > 0,]
-      # b <- e
-      # b[is.infinite(b[,input$cpue_unit]),input$cpue_unit] <- 0
-      # b <- b[b[,input$cpue_unit] > 0,]
-      
-      a <- a %>%
-        addCircleMarkers(
-          data = b,
-          lng = b$longitude,
-          lat = b$latitude,
-          radius = ~ (scale_values(as.numeric(unlist(b[,input$cpue_unit])))+1)*2,
-          # label = b[,input$cpue_unit], 
-          color = nmfspalette::nmfs_palette(palette = "crustacean")(1),
-          stroke = FALSE,
-          fillOpacity = 0.5
-        )
-    }
-    
-    # ADD IDW
-    if (input$cpue_unit != "None") {
-      b <- e[e[,input$cpue_unit] > 0,]   
-      if (input$heatmap){
-        
-        map_area<-dplyr::case_when(input$survey == "All" ~ "bs.all",
-                                   input$survey == "NBS" ~ "bs.north",
-                                   input$survey == "EBS" ~ "bs.south")
-        
-        spp_idw0 <- akgfmaps::make_idw_map(COMMON_NAME = e$common_name,
-                                           LATITUDE = e$latitude,
-                                           LONGITUDE = e$longitude,
-                                           CPUE_KGHA = as.numeric(unlist(e[,input$cpue_unit])),
-                                           region = map_area,
-                                           set.breaks = "jenks",
-                                           out.crs = "+proj=longlat +datum=WGS84")
-        spp_idw <- spp_idw0$extrapolation.grid
-        
-        a <- a %>%
-          leafem::addStarsImage(x = spp_idw,
-                                colors = nmfspalette::nmfs_palette(palette = "seagrass")(6),
-                                opacity = 0.8) #%>%
-        # addLegend(pal = nmfspalette::nmfs_palette(palette = "seagrass")(6),
-        #           values = (spp_idw),
-        #           title = paste0(input$spp, " (", input$cpue_unit, ")"))
-        
-      }
-    }
-    
-    return(a)
-  })
-
-  
-  output$table <- renderDataTable(input$datasetInput)
-
-  # output$table.login <- renderDataTable(DT::renderDT(user_data(), options = list(scrollX = TRUE)))
-  
-    
-  output$distPlot <- renderPlot({
-    
-    # generate bins based on input$bins from ui.R
-    x    <- as.numeric(data.frame(datasetInput())[, 2]) 
-    x <- x[!(is.na(x))]
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = input$color, border = 'white')
-    
-  })
+  ########* Body###########
+  source(file.path("server_files", "s_surveymap.R"),
+         local = TRUE, echo = FALSE, chdir = TRUE)
+  source(file.path("server_files", "s_glossary.R"),
+         local = TRUE, echo = FALSE, chdir = TRUE)
+  source(file.path("server_files", "s_data.R"),
+         local = TRUE, echo = FALSE, chdir = TRUE)
+  # source(file = here::here("server_files", "s_glossary.R"))
   
   ### * CSV Download####
   output$downloadData <- downloadHandler(
@@ -549,46 +410,46 @@ server <- function(input, output, session) {
     # },
     contentType = "text/csv",
     content = function(file) {
-      
+
       filename0<-file#"downloadData.csv"#file.path(getwd(), "downloadData.csv")
 
-      # Threshold Isopleths Results WARNINGS   
-      
-      write.table(input$dataset, 
+      # Threshold Isopleths Results WARNINGS
+
+      write.table(input$dataset,
                   file=filename0,
                   sep=",", row.names=FALSE, col.names=FALSE, append=TRUE)
-      
+
       write.table("Data",
                   file=filename0,
                   sep=",", row.names=FALSE, col.names=FALSE, append=TRUE)
-      
+
       write.table(input$datasetInput,
                   file=filename0,
                   sep=",", row.names=TRUE, col.names=FALSE, append=TRUE)
-      
+
       write.table("", #Space
                   file=filename0,
                   sep=",", row.names=FALSE, col.names=FALSE, append=TRUE)
-      
-      # DISCLAIMER  
+
+      # DISCLAIMER
       write.table("LICENCE",
                   file=filename0,
                   sep=",", row.names=FALSE, col.names=FALSE, append=TRUE)
-            
+
       write.table(licence0,
                   file=filename0,
                   sep=",", row.names=TRUE, col.names=FALSE, append=TRUE)
-      
+
 
     }
   )
-  
+
   ########* R Markdown Report #########
   output$report <- downloadHandler(
     # For PDF output, change this to "report.pdf"
     filename = "report.html",
     contentType = "text/html",
-    
+
     content = function(file) {
       # Copy the report file to a temporary directory before processing it, in
       # case we don't have write permissions to the current working dir (which
@@ -596,10 +457,10 @@ server <- function(input, output, session) {
       tempReport <- file.path(getwd(), "report4.Rmd")
       file.copy(from = "report4.Rmd", "report2.Rmd", overwrite = TRUE)
       file.copy("report2.Rmd", tempReport, overwrite = TRUE)
-      
+
       # Set up parameters to pass to Rmd document
       params <- list(
-        ProjectName = input$ProjectName, 
+        ProjectName = input$ProjectName,
         distPlot = input$distPlot,
         table = input$table
       )
@@ -611,8 +472,8 @@ server <- function(input, output, session) {
                         envir = new.env(parent = globalenv())
       )
     }
-    
-    
+
+
   )
 }
 

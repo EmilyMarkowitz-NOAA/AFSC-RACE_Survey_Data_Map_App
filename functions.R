@@ -37,6 +37,9 @@ PKG <- c(
   # "googledrive",
   "magrittr",
   "readr",
+  "magrittr", 
+  "stringr", 
+  "data.table",
   #Piping/operators which promote semantics
   "tidyr", 
   # library(tidyverse)
@@ -66,7 +69,8 @@ PKG <- c(
   "raster", 
   "reshape", 
   "stars",
-
+  "mapview",
+  
   # Time
   # "lubridate",
   
@@ -105,20 +109,22 @@ PKG <- c(
   # extrafont::font_import()
   #windowsFonts()
   
-  "leaflet", 
-  
-  "rgeos", 
-  "readr", 
-  "magrittr", 
-  "stringr", 
+  # colors
+  # https://drive.google.com/file/d/1EwZOVAzzqwniXczu611yk6uXs4_TuRwH/view?usp=sharing
   "nmfspalette", # oceans, waves, seagrass, urchin, crusteacean, coral
-  "data.table", 
+  "viridis", 
+  
+  # leaflet
+  "leaflet", 
+  "leafem", 
+  
+  # spatial
+  "rgeos", 
   "sp", 
   "rgdal", 
   "gstat", 
   "sp",     # Used for the spsample function
-  "KernSmooth", 
-  "leafem")
+  "KernSmooth")
 
 
 PKG <- unique(PKG)

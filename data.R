@@ -20,6 +20,9 @@ nbs_shp <- sf::st_read(system.file("data",
 ##### *** Weight ######
 df.ls<-list()
 
+
+
+
 SRVY1 <- c("EBS", "NBS")
 
 for (ii in 1:length(SRVY1)) {
@@ -45,8 +48,8 @@ for (ii in 1:length(SRVY1)) {
 dat_cpue<-SameColNames(df.ls)
 
 dat_cpue<-dat_cpue %>%
-  dplyr::rename("kg of fish/ha" = cpue_noha, 
-                "number of fish/ha" = cpue_kgha)
+  dplyr::rename("kg of fish/ha" = cpue_kgha, 
+                "number of fish/ha" = cpue_noha)
 
 dat_cpue$common_name <- str_to_sentence(dat_cpue$common_name)
 df0 <- dat_cpue
