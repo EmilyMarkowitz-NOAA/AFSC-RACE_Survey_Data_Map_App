@@ -17,11 +17,21 @@
 # Bottom temperature
 ## make on/off for temperature IDW
 
-rm(list = ls())
+# rm(list = ls())
+
+# input <- list(year = 2019,
+#               survey = c("NBS", "EBS"),
+#               spp = "Pacific halibut",
+#               cpue_unit = list("kg of fish/ha" = "wtcpue"),
+#               cpue_display = list("Sized points" = "pt"),
+#               env_unit = list("None" = "none"),
+#               stratum = TRUE,
+#               stat_points = TRUE)
 
 ##########SOURCE DATA####################
-source("reference.R") # Universal Documents
+source("style.R") # Universal Documents
 source("functions.R") # App-specific files
+# source("datadl.R") # Download Data
 source("data.R") # Universal Documents
 ### ui code (lists, instructions, etc) used in multiple tabs
 # source(file.path("ui_files", "ui_common.R"), local = TRUE, echo = FALSE, chdir = TRUE)
@@ -199,7 +209,7 @@ ui <- tagList(
     
     
     # tags$head(
-     tags$style(HTML('
+    tags$style(HTML('
     /* logo */
       .skin-black .main-header .logo {
         background-color: #ffffff;
@@ -264,6 +274,34 @@ ui <- tagList(
      .content-wrapper {
      background-color: #ffffff !important;
           color: #000000;
+          
+          
+                               .leaflet-top .leaflet-control {
+                                   margin: 0px;
+                                }    
+
+                                .leaflet-right {
+                                     margin-right: 40px;
+                                  }    
+                                .full{
+                                background-color: blue;
+                                border-radius: 50%;
+                                width: 20px;
+                                height: 20px;
+                                float: left;
+
+                                }
+                                .circle {
+                                background-color: #FFF;
+                                border: 3px solid blue;
+                                border-radius: 50%;
+                                height: 20px;
+                                width: 20px;
+
+                                }
+
+                                .leaflet-control i{
+                                  margin-right: 25px;
      }
 
 

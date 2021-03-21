@@ -26,36 +26,52 @@ ui.surveymap <- function() {
                         bottom = "auto",
                         width = 330, height = "auto",
                         
-                        h2(" "),
-                        
-                        # sliderInput(inputId = "slider", 
-                        #             label = "values",
-                        #             min = 0,
-                        #             max = 100,
-                        #             value = 0,
-                        #             step = 1),
-                        selectInput("year", "Year:", 
-                                    choices = sort(unique(df0$year)), 
-                                    selected = max(df0$year)),
-                        selectInput("spp", "Species:", 
-                                    choices = sort(unique(df0$common_name)), 
+                        br(),
+
+                        sliderInput("year", "Year:", 
+                                    min = min(dat_cpue$year, na.rm = TRUE), 
+                                    max = max(dat_cpue$year, na.rm = TRUE), 
+                                    value = max(dat_cpue$year, na.rm = TRUE),#), 
+                                    step = 1, 
+                                    sep = "",
+                                    animate = TRUE),
+                        selectInput("spp", "Species", 
+                                    choices = c(sort(unique(dat_cpue$common))), 
                                     selected = "Pacific halibut"),
-                        selectInput("survey", "Survey:", 
-                                    choices = c(sort(unique(df0$survey))), 
+                        selectInput("survey", "Survey", 
+                                    choices = c(sort(unique(dat_cpue$survey))), 
                                     selected = c("EBS", "NBS"), 
                                     multiple = TRUE),
-                        selectInput("cpue_unit", "CPUE Unit:", 
-                                    choices = c("kg of fish/ha", 
-                                                "number of fish/ha", 
-                                                "None"), 
-                                    selected = "kg of fish/ha"),
-                        checkboxInput("stat_points", "Station Points", value = TRUE),
-                        checkboxInput("cpue_points", "CPUE Points (only if CPUE Unit is not = None", value = TRUE),
-                        checkboxInput("cpue_idw", "CPUE IDW", value = FALSE),
-                        checkboxInput("cpue_bt", "Bottom Temperature IDW", value = FALSE),
-                        checkboxInput("stratum", "Stratum", value = TRUE), 
-                        
-                        downloadButton(outputId = "dl_map", label = "Download Map (PNG)")
+                        fluidRow(
+                          column(6, selectInput("cpue_unit", 
+                                                "CPUE Unit", 
+                                                choices = c("kg of fish/ha" = "wtcpue", 
+                                                            "Number of fish/ha" = "numcpue", 
+                                                            "None" = "none"), 
+                                                selected = "wtcpue")),
+                          column(6,radioButtons("cpue_display", 
+                                                "Display", 
+                                                choices = c("Sized points" = "pt", 
+                                                            "IDW raster" = "idw"), 
+                                                selected = "pt"))
+                        ), 
+                        selectInput("env_unit", "Environmental Unit (IDW)", 
+                                    choices = c("Bottom Depth (m)" = "bot_depth", 
+                                                "Bottom Temperature (°C)" = "bot_temp", 
+                                                "Surface Temperature (°C)" = "surf_temp", 
+                                                # 'expression(paste("Bottom Temperature (",degree,"C)"))' = "bot_temp",
+                                                # 'paste("Surface Temperature (",degree,"C)")' = "surf_temp",
+                                                "None" = "none"), 
+                                    selected = "none"),
+                        checkboxInput("stat_points", 
+                                      "Station Points", 
+                                      value = TRUE),
+                        checkboxInput("stratum", 
+                                      "Stratum", 
+                                      value = TRUE), 
+
+                        downloadButton(outputId = "dl_map", 
+                                       label = "Download Map (PNG)")
                         
                         # leafletOutput("survey_leaflet")                                            conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
                         # Only prompt for threshold when coloring or sizing by superzip
@@ -67,12 +83,13 @@ ui.surveymap <- function() {
           ),
           
           tags$div(id="cite",
-                   paste0('Data last updated XXXX and this app was last updated ', format(Sys.Date(), format='%B %d %Y'),'.')
-          )
+                   paste0('Data last updated ', lastdl, 
+                          ' and this app was last updated ', 
+                          format(Sys.Date(), format='%B %d %Y'),'.'))
       )
     )
-      
-
+    
+    
   )
 }
 

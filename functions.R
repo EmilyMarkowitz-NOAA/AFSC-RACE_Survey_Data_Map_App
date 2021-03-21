@@ -47,6 +47,7 @@ PKG <- c(
 
   # Text Management
   "stringr",
+  "htmltools", 
   
   # Spatial
   "akgfmaps", # devtools::install_github("sean-rohan-noaa/akgfmaps", build_vignettes = TRUE)
@@ -117,6 +118,7 @@ PKG <- c(
   # leaflet
   "leaflet", 
   "leafem", 
+  "leafpop", 
   
   # spatial
   "rgeos", 
@@ -205,8 +207,20 @@ NOAA.Fonts<-"Proxima Nova"
 
 
 ######FUNCTIONS#######
+# https://stackoverflow.com/questions/37446283/creating-legend-with-circles-leaflet-r
+addLegendCustom <- function(map, position = "bottomright", title = "", colors, labels, sizes, opacity = 0.5){
+  colorAdditions <- paste0(colors, "; width:", sizes, "px; height:", sizes, "px")
+  labelAdditions <- paste0("<div style='display: inline-block;height: ", sizes, "px;margin-top: 4px;line-height: ", sizes, "px;'>", labels, "</div>")
+  
+  return(addLegend(map, position = position, title = title, colors = colorAdditions, labels = labelAdditions, opacity = opacity))
+}
 
-
+ageoffile<-function(path) {
+  # system("touch temp")
+  info <- file.info(path)
+  x<-format(info$mtime,"%B %d, %Y")
+  return(x)
+}
 
 SameColNames<-function(df.ls) {
   #All column names
@@ -239,7 +253,6 @@ SameColNames<-function(df.ls) {
   }
   return(df.rbind0)
 }
-
 
 scale_values<-function(X) {
   # X <- X[X != 0]

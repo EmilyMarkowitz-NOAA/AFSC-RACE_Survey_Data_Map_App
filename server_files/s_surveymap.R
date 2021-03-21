@@ -1,143 +1,219 @@
 #######* Survey Map############
 ## create static element
 output$survey_leaflet <- renderLeaflet({
-  e <- df0 %>%
-    dplyr::filter(year == input$year &
-                    common_name == input$spp &#)
-                    # if (input$survey != "All") {
-                    #   e <- e %>%
-                    # dplyr::filter(
-                    survey %in% input$survey)
-  # }
   
+  df0 <- dat_cpue %>%
+    dplyr::filter(year == input$year &
+                    common == input$spp &
+                    survey %in% input$survey)
+
   a <- leaflet() %>%
     addTiles() %>%
     setView(lat = 56.60, lng = -159.3, zoom = 5) 
   
   # ADD STRATUM POLYGON?
   if (input$stratum) {
-    # if (input$survey == "All") {
-    #   a <- a %>%
-    #     addPolygons(data = bs_shp, 
-    #                 weight = 1, 
-    #                 color = "grey50", 
-    #                 opacity = 0.5)
-    # } else 
-    if (sum(input$survey %in% "NBS")>0) {
-      a <- a %>%
-        addPolygons(data = nbs_shp, 
+    
+    df <- df0 %>%
+      dplyr::filter(survey %in% input$survey) %>% 
+      dplyr::select(survey, survey_num, stratum_shp) %>% 
+      unique()
+    
+    code_str <- glue::glue('a <- a %>%
+        addPolygons(data = {df$stratum_shp}, 
                     weight = 1, 
-                    # color = "grey50", 
                     opacity = 0.5, 
                     stroke = 1, 
-                    color = nmfspalette::nmfs_palette(palette = "oceans")(1))
-    } 
-    # else 
-    if (sum(input$survey %in% "EBS")>0) {
+                    color = nmfspalette::nmfs_palette(palette = 
+                           "oceans")({max(dat_cpue$survey_num)+1})[{df$survey_num}])')
+    eval(parse(text = code_str))
+  }
+  
+  
+  # ADD CPUE IDW
+  if (paste(input$cpue_unit) != "none") {
+    
+    df <- df0[df0[,paste(input$cpue_unit)] > 0,]   
+    breaks <- eval(parse(text = df[1, paste0(paste(input$cpue_unit), "_breaks")]))
+    
+    if (paste(input$cpue_display) == "idw") {
+      leg_lab <- as.numeric(trimws(formatC(x = breaks, 
+                                           digits = 3, 
+                                           big.mark = ",")))
+      leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
+      
+      if (sum(unique(df$survey) %in% c("NBS", "EBS")) == 2) {
+        df$map_area[df$survey %in% c("NBS", "EBS")] <- "bs.all"
+        df$survey[df$survey %in% c("NBS", "EBS")] <- "BS"
+      }
+      
+      for (i in 1:length(unique(df$survey))) {
+        
+        df1 <- df %>% 
+                 dplyr::filter(survey == unique(df$survey)[i])
+        
+        pal <- nmfspalette::nmfs_palette(palette = "seagrass", reverse = TRUE)(length(breaks)+1)
+
+        idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
+                                           LATITUDE = df1$latitude,
+                                           LONGITUDE = df1$longitude,
+                                           CPUE_KGHA = as.numeric(unlist(df1[,paste(input$cpue_unit)])),
+                                           region = df1$map_area[1],
+                                           set.breaks = breaks,
+                                           out.crs = "+proj=longlat +datum=WGS84")
+        
+        idw1 <- idw0$extrapolation.grid
+        
+        a <- a %>%
+          leafem::addStarsImage(x = idw1,
+                                colors = pal,
+                                opacity = 0.8) 
+      }
+      
       a <- a %>%
-        addPolygons(data = ebs_shp, 
-                    weight = 1, 
-                    # color = "grey50", 
-                    opacity = 0.5, 
-                    stroke = 1, 
-                    color = nmfspalette::nmfs_palette(palette = "oceans")(2)[2])
+          addLegend(position = "bottomright", 
+                    pal = pal, 
+                    labels = leg_lab, 
+                    values = as.numeric(breaks), 
+                    title = paste0(names(input$cpue_unit)),
+                    opacity = 0.8)
+      
+    } else if (paste(input$cpue_display) == "pt") {
+      
+      df4 <- df %>% 
+        dplyr::filter(year == input$year &
+                        survey %in% input$survey & 
+                        common == input$spp) %>%
+        dplyr::select("latitude", "longitude", 
+                      "station", "survey", "stratum", "scientific", 
+                      "wtcpue", "numcpue", "datetime", "common", 
+                      "surf_temp", "bot_temp", "bot_depth")      
+      
+      circle_size_x <- 5
+      x_scaled <- scale_values(as.numeric(unlist(df[,paste(input$cpue_unit)])))+1
+      pt_col <- nmfspalette::nmfs_palette(palette = "crustacean")(1)
+      leg_lab <- as.numeric(trimws(formatC(x = scale_values(breaks)+1, #as.numeric(quantile(x_scaled)),
+                                           digits = 3, #drop0trailing = TRUE,
+                                           big.mark = ",")))
+      leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
+      
+      a <- a %>%
+        addCircleMarkers(
+          data = df4,
+          lng = df4$longitude,
+          lat = df4$latitude,
+          radius = ~ x_scaled*circle_size_x,
+          popup = paste("<strong>Species:</strong> ", paste0(df4$common, " (<em>", df4$scientific, "</em>)"), "<br>",
+                        # "<strong><u>Survey Data</u></strong> ", "<br>",
+                        "<strong>Station:</strong> ", df4$station, "<br>",
+                        "<strong>Stratum:</strong> ", df4$stratum,  "<br>",
+                        "<strong>Latitude (°N):</strong> ", df4$latitude,  "<br>",
+                        "<strong>Longitude (°W):</strong> ", df4$longitude,  "<br>",
+                        "<strong>Date Surveyed:</strong> ", df4$datetime,  "<br>",
+                        # "<strong><u>Environmental Data</u></strong> ", "<br>",
+                        "<strong>Bottom Temperature (°C):</strong> ", df4$bot_temp,  "<br>",
+                        "<strong>Surface Temperature (°C):</strong> ", df4$surf_temp,  "<br>",
+                        "<strong>Average Depth (m):</strong> ", df4$bot_depth,  "<br>",
+                        # "<strong><u>Species Data</u></strong> ", "<br>",
+                        "<strong>Number CPUE (kg of fish/ha):</strong> ", df4$numcpue,  "<br>",
+                        "<strong>Weight CPUE (Number of fish/ha):</strong> ", df4$wtcpue, "<br>"), 
+          color = pt_col,
+          stroke = FALSE,
+          fillOpacity = 0.5
+        ) %>%
+        addLegendCustom(title = paste0("CPUE (", names(input$cpue_unit), ")"), 
+                        colors = pt_col, 
+                        labels = leg_lab, 
+                        sizes = quantile(x_scaled*circle_size_x), 
+                        opacity = 0.5)
+      
+      }
+
+  }
+  
+  
+  # ADD CPUE IDW
+  if (paste(input$env_unit) != "none") {
+
+    leg_lab <- as.numeric(trimws(formatC(x = eval(parse(text = df[1, paste0(paste(input$env_unit), "_breaks")])), 
+                                         digits = 3, 
+                                         big.mark = ",")))
+    leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
+    
+    if (sum(unique(df$survey) %in% c("NBS", "EBS")) == 2) {
+      df$map_area[df$survey %in% c("NBS", "EBS")] <- "bs.all"
+      df$survey[df$survey %in% c("NBS", "EBS")] <- "BS"
     }
+    
+    for (i in 1:length(unique(df$survey))) {
+      df1 <- df %>% 
+        dplyr::filter(survey == unique(df$survey)[i])
+      
+      pal <- viridis::viridis(n.breaks)
+      
+      idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
+                                         LATITUDE = df1$latitude,
+                                         LONGITUDE = df1$longitude,
+                                         CPUE_KGHA = as.numeric(unlist(df1[,paste(input$env_unit)])),
+                                         region = df1$map_area[1],
+                                         set.breaks = breaks,
+                                         out.crs = "+proj=longlat +datum=WGS84")
+      
+      idw1 <- idw0$extrapolation.grid
+      
+      a <- a %>%
+        leafem::addStarsImage(x = idw1,
+                              colors = pal,
+                              opacity = 0.8) 
+    }
+    
+    a <- a %>%
+      addLegend(position = "bottomright", 
+                pal = pal, 
+                labels = leg_lab, 
+                values = as.numeric(breaks), #~df$wtcpue,
+                title = paste0(names(input$env_unit)),
+                opacity = 0.8)
   }
   
   # ADD STATION POINTS?
   if (input$stat_points) {
+    
+    df4 <- dat_cpue %>% 
+      dplyr::filter(year == input$year &
+                      survey %in% input$survey) %>%
+      dplyr::select("latitude", "longitude", 
+                    "station", "survey", "stratum", "scientific", 
+                    "wtcpue", "numcpue", "datetime", "common", 
+                    "surf_temp", "bot_temp", "bot_depth")      
+    
+    
+    # df2 <- df4 %>%
+    #   dplyr::select("latitude", "longitude", "station") %>%
+    #   unique()
+    
     a <- a %>%
-      # %>%
       addCircleMarkers(
-        data = e, 
-        lng = e$longitude,
-        lat = e$latitude,               
-        radius = 1, 
+        data = df4,
+        lng = df4$longitude,
+        lat = df4$latitude, 
+        popup = paste("<strong>Station:</strong> ", df4$station, "<br>",
+                      "<strong>Stratum:</strong> ", df4$stratum,  "<br>",
+                      "<strong>Latitude (°N):</strong> ", df4$latitude,  "<br>",
+                      "<strong>Longitude (°W):</strong> ", df4$longitude,  "<br>",
+                      "<strong>Date Surveyed:</strong> ", df4$datetime,  "<br>",
+                      "<strong>Bottom Temperature (°C):</strong> ", df4$bot_temp,  "<br>",
+                      "<strong>Surface Temperature (°C):</strong> ", df4$surf_temp,  "<br>",
+                      "<strong>Average Depth (m):</strong> ", df4$bot_depth,  "<br>"), 
+        radius = 2.5, 
         color = nmfspalette::nmfs_palette(palette = "urchin")(1),
         stroke = FALSE, 
-        fillOpacity = 0.5) #%>%
-    # addLegend("bottomright", 
-    #           pal = nmfspalette::nmfs_palette(palette = "urchin")(1), 
-    #           values = 0,
-    #           title = paste0("Stations with 0 CPUE (", input$cpue_unit, ")"),
-    #           # labFormat = labelFormat(prefix = "$"),
-    #           opacity = 1)
-  }
-  
-  # ADD SIZED CPUE?
-  if (input$cpue_unit != "None" & input$cpue_points) {
-    b <- e[e[,input$cpue_unit] > 0,]
-    # b <- e
-    # b[is.infinite(b[,input$cpue_unit]),input$cpue_unit] <- 0
-    # b <- b[b[,input$cpue_unit] > 0,]
-    
-    a <- a %>%
-      addCircleMarkers(
-        data = b,
-        lng = b$longitude,
-        lat = b$latitude,
-        radius = ~ (scale_values(as.numeric(unlist(b[,input$cpue_unit])))+1)*2,
-        # label = b[,input$cpue_unit], 
-        color = nmfspalette::nmfs_palette(palette = "crustacean")(1),
-        stroke = FALSE,
-        fillOpacity = 0.5
-      )
-  }
-  
-  # ADD IDW
-  if (input$cpue_unit != "None") {
-    b <- e[e[,input$cpue_unit] > 0,]   
-    if (input$cpue_idw){
-      
-      map_area<-dplyr::case_when(input$survey %in% c("NBS", "EBS") ~ "bs.all",
-                                 input$survey == "NBS" ~ "bs.north",
-                                 input$survey == "EBS" ~ "bs.south")
-      
-      spp_idw0 <- akgfmaps::make_idw_map(COMMON_NAME = e$common_name,
-                                         LATITUDE = e$latitude,
-                                         LONGITUDE = e$longitude,
-                                         CPUE_KGHA = as.numeric(unlist(e[,input$cpue_unit])),
-                                         region = map_area,
-                                         set.breaks = "jenks",
-                                         out.crs = "+proj=longlat +datum=WGS84")
-      spp_idw <- spp_idw0$extrapolation.grid
-      
-      a <- a %>%
-        leafem::addStarsImage(x = spp_idw,
-                              colors = nmfspalette::nmfs_palette(palette = "seagrass")(6),
-                              opacity = 0.8) #%>%
-      # addLegend(pal = nmfspalette::nmfs_palette(palette = "seagrass")(6),
-      #           values = (spp_idw),
-      #           title = paste0(input$spp, " (", input$cpue_unit, ")"))
-      
-    }
-    
-    
-    if (input$bt_idw){
-      
-      map_area<-dplyr::case_when(input$survey %in% c("NBS", "EBS") ~ "bs.all",
-                                 input$survey == "NBS" ~ "bs.north",
-                                 input$survey == "EBS" ~ "bs.south")
-      
-      bt_idw0 <- akgfmaps::make_idw_map(COMMON_NAME = e$common_name,
-                                         LATITUDE = e$latitude,
-                                         LONGITUDE = e$longitude,
-                                         CPUE_KGHA = e$bot_temp,
-                                         region = map_area,
-                                         set.breaks = "jenks",
-                                         out.crs = "+proj=longlat +datum=WGS84")
-      bt_idw <- bt_idw0$extrapolation.grid
-      
-      a <- a %>%
-        leafem::addStarsImage(x = bt_idw,
-                              colors = viridis::viridis(6),
-                              opacity = 0.8) #%>%
-      # addLegend(pal = nmfspalette::nmfs_palette(palette = "seagrass")(6),
-      #           values = (spp_idw),
-      #           title = paste0(input$spp, " (", input$cpue_unit, ")"))
-      
-    }
-    
+        fillOpacity = 0.5) %>%
+      addLegend(position = "bottomright",
+                colors = nmfspalette::nmfs_palette(palette = "urchin")(1),
+                labels = "Stations",
+                className = "circle",
+                opacity = 1)
   }
   
   return(a)

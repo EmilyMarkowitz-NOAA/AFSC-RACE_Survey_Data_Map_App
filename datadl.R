@@ -1,5 +1,8 @@
 
 
+
+
+
 files <- c(
   # AI
   "ai1983_2000", 
@@ -26,11 +29,13 @@ files <- c(
   # GOA
   "goa1984_1987", 
   "goa1990_1999",
-  "goa2000_2005", 
+  "goa2001_2005", 
   "goa2007_2013",
   "goa2015_2019"
   
   )
+
+# Download data
 
 url <- "https://apps-afsc.fisheries.noaa.gov/RACE/groundfish/survey_data/downloads/"
 
@@ -47,9 +52,6 @@ for (i in 1:length(files)) {
             overwrite = TRUE)
   
   file.remove(paste0("./data/publicdata/unzip/", files[i], "/", files[i], ".csv"))
-  # unlink(x = paste0("./data/publicdata/", files[i], "/"), force = TRUE, recursive = TRUE)
-  # do.call(file.remove, list(list.files(paste0("./data/publicdata/", files[i], "/"), full.names = TRUE)))
-  
 }
 
 df.ls<-list()
@@ -65,34 +67,87 @@ for (i in 1:length(a)){
   if (names(b)[1] %in% "x1"){
     b$x1<-NULL
   }
+  urlname <- strsplit(x = a[i][[1]], split = "\\/")[[1]]
   urlname <- gsub(pattern = ".csv", 
                   replacement = "", 
-                  x = urlname[[1]][length(urlname[[1]])])
+                  x = urlname[length(urlname)])
   b$file <- paste0(url, urlname, ".zip")
   b$survey <- toupper(unique(sub("^([[:alpha:]]*).*", "\\1", urlname)))
   df.ls[[i]]<-b
   names(df.ls)[i]<-a[i]
 }
 
-dat_cpue<-SameColNames(df.ls)
+dat_cpue0<-SameColNames(df.ls)
 
-dat_cpue<-dat_cpue %>%
-  dplyr::rename("kg of fish/ha" = cpue_kgha, 
-                "number of fish/ha" = cpue_noha)
+dat_cpue <- dat_cpue0 %>%
+  dplyr::mutate(survey_long = dplyr::case_when(survey == "AI" ~ "Aleutian Islands", 
+                                               survey == "ESSLOPE" ~ "Bering Sea Slope", 
+                                               survey == "EBS" ~ "Eastern Bering Sea Shelf",  
+                                               survey == "GOA" ~ "Gulf of Alaska",  
+                                               survey == "NBS" ~ "Northern Bering Sea Shelf")) %>%
+  dplyr::mutate(map_area = dplyr::case_when(survey == "AI" ~ "ai", 
+                                               survey == "ESSLOPE" ~ "bs.slope", 
+                                               survey == "EBS" ~ "bs.south",  
+                                               survey == "GOA" ~ "goa",  
+                                               survey == "NBS" ~ "bs.north")) %>%
+  dplyr::mutate(stratum_shp = dplyr::case_when(survey == "AI" ~ "shp_ai", 
+                                            survey == "ESSLOPE" ~ "shp_bsslope", 
+                                            survey == "EBS" ~ "shp_ebs",  
+                                            survey == "GOA" ~ "shp_goa",  
+                                            survey == "NBS" ~ "shp_nbs")) %>%
+  dplyr::mutate(common = str_to_sentence(common)) %>%
+  dplyr::mutate(survey_num = as.numeric(factor(survey))) %>% 
+  data.frame()
 
-dat_cpue$common_name <- str_to_sentence(dat_cpue$common_name)
-df0 <- dat_cpue
-df0$`kg of fish/ha`[is.na(df0$`kg of fish/ha`)] <- 0
-df0$`number of fish/ha`[is.na(df0$`number of fish/ha`)] <- 0
+dat_cpue$wtcpue[is.na(dat_cpue$wtcpue)] <- 0
+dat_cpue$numcpue[is.na(dat_cpue$numcpue) | dat_cpue$numcpue == -9999] <- 0
+dat_cpue <- dat_cpue[!(is.na(dat_cpue$year)), ]
 
-dat_cpue_newnames <- data.frame(oldnames = c("year", "vessel", "survey", "stratum", 
-                                             "stationid", "species_name", "species_code",  
-                                             "longitude", "latitude", "haul", "file", 
-                                             "cpue_noha", "cpue_kgha", "common_name", "area_fished_ha"), 
-                                newnames = c("Year", "Vessel", "Survey", "Stratum", 
-                                             "Stationid", "Species Name", "Species Code",  
-                                             "Longitude (*W)", "Latitude (*N)", "Haul", "File", 
-                                             "CPUE (#/ha)", "CPUE (kg/ha)", "Common Name", "Area Fished (ha)"))
+# dat_cpue$label <- 'expression(paste(
+#   "Station): ", dat_cpue$station,  "
+#   
+#   Stratum: ", dat_cpue$stratum, "
+#   
+#   Latitude (",degree,"N)): ", dat_cpue$latitude, "
+#   
+#   Longitude (",degree,"W)): ", dat_cpue$latitude, "
+#   
+#   Date Surveyed: ", dat_cpue$datetime, "
+#   
+#   **Environmental Variables:**
+#   
+#   Bottom Temperature (",degree,"C): ", dat_cpue$bot_temp, "
+#   
+#   Surface Temperature (",degree,"C): ", dat_cpue$surf_temp, "
+#   
+#   Average Depth (m): ",  dat_cpue$bot_depth, "
+#   
+#   **CPUE of ", dat_cpue$common, "(",dat_cpue$scientific, ")**" ,":
+#   
+#   Number CPUE (kg of fish/ha): ",  dat_cpue$wtcpue, "
+#   
+#   Weight CPUE (Number of fish/ha): ",  dat_cpue$numcpue)) '
+  
+# Set breaks for all years for each species
+for (i in 1:length(unique(dat_cpue$common))) {
+  
+  df <- dat_cpue %>%
+    filter(common == unique(dat_cpue$common)[i])
+  
+  n.breaks <- 6
+  
+  var <- c("wtcpue", "numcpue", "bot_temp", "bot_depth", "surf_temp")
+  
+  code_str <- glue::glue(
+    'dat_cpue${var}_breaks <- paste0("c(", 
+                                   paste(quantile(x = df${var}, 
+                                     na.rm = TRUE, 
+                                     probs = c((1:(n.breaks-1))/n.breaks)), collapse = ", "), ")")
+    
+    ')
+  eval(parse(text = code_str))
+  
+}
 
-
-
+save(dat_cpue, dat_cpue0, 
+     file = "./data/publicdata/all_data.Rdata")
