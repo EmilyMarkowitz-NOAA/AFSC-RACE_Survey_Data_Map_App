@@ -15,7 +15,7 @@ ui.surveymap <- function() {
           ),
           
           # If not using custom CSS, set height of leafletOutput to a number instead of percent
-          leafletOutput("survey_leaflet", width="100%", height="100%"),
+          leafletOutput("survey_leaflet", width="100%", height="95%"),
           
           # Shiny versions prior to 0.11 should use class = "modal" instead.
           absolutePanel(id = "controls", 
@@ -45,8 +45,8 @@ ui.surveymap <- function() {
                         fluidRow(
                           column(6, selectInput("cpue_unit", 
                                                 "CPUE Unit", 
-                                                choices = c("kg of fish/ha" = "wtcpue", 
-                                                            "Number of fish/ha" = "numcpue", 
+                                                choices = c("kg/ha" = "wtcpue", 
+                                                            "number/ha" = "numcpue", 
                                                             "None" = "none"), 
                                                 selected = "wtcpue")),
                           column(6,radioButtons("cpue_display", 
@@ -80,12 +80,13 @@ ui.surveymap <- function() {
                         
                         # plotOutput("histCentile", height = 200),
                         # plotOutput("scatterCollegeIncome", height = 250)
-          ),
-          
-          tags$div(id="cite",
-                   paste0('Data last updated ', lastdl, 
-                          ' and this app was last updated ', 
-                          format(Sys.Date(), format='%B %d %Y'),'.'))
+          # ),
+          # 
+          # tags$div(id="cite", 
+          #          tags$em(paste0('Data last updated ', lastdl,
+          #                 ' and this app was last updated ',
+          #                 format(Sys.Date(), format='%B %d %Y'),'.')))
+          )
       )
     )
     

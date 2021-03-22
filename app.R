@@ -21,17 +21,22 @@
 
 # input <- list(year = 2019,
 #               survey = c("NBS", "EBS"),
-#               spp = "Pacific halibut",
-#               cpue_unit = list("kg of fish/ha" = "wtcpue"),
+# #               spp = "Pacific halibut",
+#               spp = "Nudibranch (unidentified)",
+# #               cpue_unit = list("kg of fish/ha" = "wtcpue"),
+#               cpue_unit = list("Number of fish/ha" = "numcpue"),
 #               cpue_display = list("Sized points" = "pt"),
 #               env_unit = list("None" = "none"),
 #               stratum = TRUE,
 #               stat_points = TRUE)
 
-##########SOURCE DATA####################
+
+# source("datadl.R") # Download Data
+# source("create_idws.R") # Download Data
+
+##############SOURCE DATA####################
 source("style.R") # Universal Documents
 source("functions.R") # App-specific files
-# source("datadl.R") # Download Data
 source("data.R") # Universal Documents
 ### ui code (lists, instructions, etc) used in multiple tabs
 # source(file.path("ui_files", "ui_common.R"), local = TRUE, echo = FALSE, chdir = TRUE)
@@ -94,7 +99,7 @@ ui <- tagList(
   
   header = dashboardHeader(title = 
                              tags$a(href = 'https://www.fisheries.noaa.gov/',
-                                    tags$img(src="FISHERIES-Logo WEB ONLY.png", width = '130'), 
+                                    tags$img(src="FISHERIES-Logo WEB ONLY.png", width = '90'), 
                                     HTML(title0), 
                                     style = paste0("text-align: right; 
                                     color: #10497e; 
@@ -115,8 +120,6 @@ ui <- tagList(
                            
                            
                            #Other Icons
-
-                           
                             dropdownMenu(
                              tags$li(tags$style(HTML('color: #10497e;}'))),                          
                              type = "notifications",
@@ -129,10 +132,10 @@ ui <- tagList(
                              badgeStatus = NULL,
                              headerText = "See also:",
                              # style = "color: #1f93d0;")
-                             notificationItem("shiny", icon = icon("file"), status = "info", # TOLEDO
-                                              href = "http://shiny.rstudio.com/"),
-                             notificationItem("shinydashboard", icon = icon("file"), status = "info",
-                                              href = "https://rstudio.github.io/shinydashboard/")
+                             notificationItem("NOAA Fisheries", icon = icon("fish"), status = "info", # TOLEDO
+                                              href = "https://www.fisheries.noaa.gov/"),
+                             notificationItem("AFSC RACE Division", icon = icon("ship"), status = "info",
+                                              href = "https://www.fisheries.noaa.gov/about/resource-assessment-and-conservation-engineering-division")
                            ),
                            # tags$li(class = "dropdown",
                            #         tags$a(icon("question-circle"),
@@ -338,21 +341,36 @@ ui <- tagList(
   
   #####* Footer######
   
-  tags$footer("U.S. Department of Commerce | National Oceanic and Atmospheric Administration | National Marine Fisheries Service", 
-              align = "center", 
-              style = "
+  # tags$footer("U.S. Department of Commerce | National Oceanic and Atmospheric Administration | National Marine Fisheries Service",
+  #             align = "center",
+  #             style = "
+  #             position:absolute;
+  #             bottom:0;
+  #             width:100%;
+  #             height:60px;   /* Height of the footer */
+  #             color: #10497e;
+  #             font-size: 15px;
+  #             font-family:'Arial Narrow';
+  #             padding: 10px;
+  #             background-color: #ffffff;
+  #             z-index: 1000;
+  #             ")
+
+tags$footer("U.S. Department of Commerce | National Oceanic and Atmospheric Administration | National Marine Fisheries Service",
+            align = "center",
+            style = "
               position:absolute;
               bottom:0;
               width:100%;
-              height:60px;   /* Height of the footer */
-              color: #10497e; 
-              font-size: 15px;
+              height:25px;   /* Height of the footer */
+              color: #10497e;
+              font-size: 10px;
               font-family:'Arial Narrow';
-              padding: 10px;
+              padding: 0px;
               background-color: #ffffff;
               z-index: 1000;
               ")
-  
+
 )
 
 server <- function(input, output, session) {

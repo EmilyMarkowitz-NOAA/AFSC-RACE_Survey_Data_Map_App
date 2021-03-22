@@ -3,23 +3,29 @@
 source("./functions.R")
 source("./data.R")
 
-cpue <- c("kg of fish/ha", "number of fish/ha")
+var1 <- c("wtcpue", "numcpue")
+var2 <- c("bot_temp", "bot_depth", "surf_temp")
+var_long <- c("CPUE (kg/ha)", "CPUE (number/ha)", 
+               "Bottom Temperature (°C)", "Bottom Depth (m)", "Surface Temperature (°C)")
+
 yr <- unique(dat_cpue$year)
-surv <- c("NBS", "EBS", "BS")#, "All")
-common <- unique(dat_cpue$common_name)
-sppcode <- unique(dat_cpue$species_code)
-comb <- expand.grid(cpue, yr, surv, common, sppcode)
-names(comb) <- c("cpue", "yr", "survey", "spp", "sppcode")
+survey <- c("NBS", "EBS", "BS")#, "All")
+common <- "Pacific halibut"
+# common <- unique(dat_cpue$common_name)
+comb1 <- expand.grid(var1, yr, survey, common)
+names(comb1) <- c("var", "yr", "survey", "common")
+
+comb2 <- expand.grid(var2, yr, survey, NA)
+names(comb2) <- c("var", "yr", "survey", "common")
+
+comb <- rbind.data.frame(comb1, comb2)
+  
 comb <- comb %>% 
-  dplyr::mutate(map_area = dplyr::case_when(comb$survey %in% "NBS" ~ "bs.north", 
-                                  survey %in% "EBS" ~ "bs.south", 
-                                  survey %in% c("BS") ~ "bs.all")) %>% # all will change when we have GOA/AI/etc
-  dplyr::mutate(cpue = as.character(cpue), 
+  dplyr::left_join(., data.frame(var = c(var1, var2), var_long)) %>%
+  dplyr::mutate(var = as.character(var), 
                 survey = as.character(survey), 
-                spp = as.character(spp)) %>%
+                common = as.character(common)) %>%
   tibble()
-
-
 
 spp_idw <- list() 
 
@@ -29,54 +35,149 @@ for (i in 1:nrow(comb)){
   
   temp <- list(idw = NA, 
                plot = NA, 
+               filename = NA, 
                yr = comb$yr[i], 
-               survey = surv, 
-               cpue = comb$cpue[i],
-               map_area = comb$map_area[i],
-               common_name = comb$spp[i], 
-               species_code = comb$sppcode[i])
+               survey = comb$survey[i], 
+               var = comb$var[i],
+               var_long = comb$var_long[i],
+               common = comb$common[i])
   
-  surv <- comb$survey[i]
-  if(comb$survey[i] == "BS") {
-    surv <- c("NBS", "EBS")
+  survey0 <- temp$survey
+  if (survey0 == "BS") {
+    survey0 <- c("NBS", "EBS")
   }
   
-  e <- dat_cpue %>%
-    dplyr::select(-file, -area_fished_ha, -stationid, -vessel, -haul) %>%
-    dplyr::filter(year == comb$yr[i] &
-          survey == surv &
-          common_name == comb$spp[i]) 
-
+  df <- dat_cpue %>%
+    dplyr::filter(year == temp$yr &
+          survey %in% survey0) %>%
+    dplyr::select("year", "wtcpue", "survey", "surf_temp", "stratum", 
+                  "station", "scientific", "numcpue", "longitude", "latitude", 
+                  # "datetime", 
+                  "common", "bot_temp", "bot_depth", "survey_long", "map_area", 
+                  "wtcpue_breaks", "numcpue_breaks", "bot_temp_breaks", "bot_depth_breaks", "surf_temp_breaks")
   
-  if (sum(as.numeric(unlist(e[,comb$cpue[i]])), na.rm = T) > 0 &
-      nrow(e) != 0 & 
-      comb$survey[i] != "NBS" &
-      max(as.numeric(unlist(e[,comb$cpue[i]])), na.rm = T) >= 1 # remove anything with less than a max value of 1
-      ) {
+  if (!is.na(temp$common)) {
+    df <- df %>%
+      dplyr::filter(common == temp$common)
+  }
+  df <- df[!(is.na(df[,temp$var])),]
+  
+  if (temp$survey %in% "BS"){
+    df$map_area <- "bs.all"
+  }
+  
+  filename <- paste0(temp$yr, "_", 
+                     temp$survey,  "_", 
+                     temp$var)
+  if (temp$var %in% c("wtcpue", "numcpue")){
+    filename <- paste0(temp$yr, "_", 
+                       temp$survey,  "_", 
+                       temp$var,  "_", 
+                       temp$common)
+  }
+  temp$filename <- filename
+  
+  if (nrow(df) > 0 && # if there is no data in this dataset to make the idw with
+      ((temp$survey == "BS" & # and if eihter.... if BS and either NBS (common) or EBS are missing
+      sum(unique(df$survey) %in% survey0) == 2) ||
+      temp$survey == survey0) ) { # or if the survey needed is the one available in df
     
-    cpue <- as.numeric(unlist(e[,comb$cpue[i]])) 
-    cpue[is.na(cpue)]<-0 # TOLEDO Sean - kosher?
-    
-    spp_idw0 <- akgfmaps::make_idw_map(COMMON_NAME = e$common_name,
-                              LATITUDE = e$latitude, 
-                              LONGITUDE = e$longitude, 
-                              CPUE_KGHA = cpue, 
-                              region = comb$map_area[i], 
-                              # key.title = paste0(comb$spp[i], " (", comb$cpue[i], ")"),
-                              set.breaks = "jenks", 
-                              out.crs = "+proj=longlat +datum=WGS84")
-    
+    breaks <- round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1)
+    leg_lab <- as.numeric(trimws(formatC(x = breaks, #as.numeric(quantile(x_scaled)),
+                                         digits = 3, #drop0trailing = TRUE,
+                                         big.mark = ",")))
+    leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
+    # x = NA
+    # extrap.box = NA
+    # grid.cell = c(0.05, 0.05)
+    # in.crs = "+proj=longlat"
+    # key.title = "auto"
+    # log.transform = FALSE
+    # idw.nmax = 4
+    # use.survey.bathymetry = TRUE
+    # return.continuous.grid = TRUE
+    # 
+    # COMMON_NAME = df$common
+    # LATITUDE = df$latitude
+    # LONGITUDE = df$longitude
+    # CPUE_KGHA = df[,temp$var]
+    # region = df$map_area[1]
+    # set.breaks = breaks
+    # out.crs = "+proj=longlat +datum=WGS84"
 
-
+    spp_idw0 <- make_idw_map0(COMMON_NAME = df$common,
+                              LATITUDE = df$latitude, 
+                              LONGITUDE = df$longitude, 
+                              CPUE_KGHA = df[,temp$var], 
+                              region = df$map_area[1], 
+                              set.breaks = breaks) # , out.crs = "+proj=longlat +datum=WGS84"
+    
+    # scale colors
+    if (temp$var %in% c("wtcpue", "numcpue")) {
+      pal <- nmfspalette::nmfs_palette(palette = "seagrass",
+                                       reverse = TRUE)(spp_idw0$n.breaks)
+      pal <- c("white", pal[-1])
+      # pal <- pal[-length(pal)]
+      # pal <- c("white", RColorBrewer::brewer.pal(9, name = "Greens")[c(2, 4, 6, 8, 9)])
+      # pal <- pal[-length(pal)]
+      # pal <- c("white", pal)
+      pal_lab <- c("No Catch", leg_lab)
+    } else {
+      pal <- c(viridis::viridis(spp_idw0$n.breaks+1))
+      pal <- pal[-1]
+      pal <- pal[-length(pal)]
+      pal_lab <- leg_lab
+    }
+    
+    spp_idw0$plot <- spp_idw0$plot + 
+      scale_fill_manual(
+        name = paste0(ifelse(is.na(temp$common), 
+                             paste0(temp$yr, " Survey"), 
+                             paste0(temp$yr, " ", temp$common)), 
+                      "\n", temp$var_long), 
+        labels = pal_lab,
+        values = pal) #%>% 
+      # akgfmaps::add_map_labels() #%>% 
+    # change_fill_color(new.scheme = pal, 
+    #                   show.plot = TRUE)
+    
+    temp$plot <- spp_idw0$plot
+    levels(x = spp_idw0$extrapolation.grid$var1.pred) <- c("No Catch", leg_lab)
     temp$idw <- spp_idw0$extrapolation.grid
-    temp$plot <- spp_idw0$plot + 
-      guides(fill=guide_legend(title = paste0(comb$spp[i], " (", comb$cpue[i], ")") ))
+    # ggplot() + geom_stars(data = temp$idw)
+    
+    a <- c("pdf", "png")
+    code_str <- glue::glue("ggsave(filename = paste0(filename, '.{a}'), 
+           plot = temp$plot, 
+           device = '{a}', 
+           path = './maps/', 
+           width = 12, 
+           height = 9, 
+           units = 'in')")
+    eval(parse(text = code_str))
+    
+    # spp_idw0 %>% 
+    #   akgfmaps::create_map_file(file.prefix = filename, 
+    #                   file.path = "./maps/", 
+    #                   try.change_text_size = TRUE, # 12x9 is a pre-defined size
+    #                   width = 12, 
+    #                   height = 9, 
+    #                   units = "in", 
+    #                   res = 300, 
+    #                   bg = "transparent")
+    
+    # spp_idw0$plot # + theme(legend.position = "left")
+    
+    
   }
 
   # name stuff in your lists
-  spp_idw <- c(spp_idw, temp)
-  names(spp_idw)[i]<-paste(comb$yr[i], surv, comb$spp[i], comb$cpue[i], sep = "_")
-
+  spp_idw <- c(spp_idw, list(temp))
+  names(spp_idw)[i]<-filename
+  
+  if ((i %% 100) == 0){
+    save(spp_idw, file = paste0("./maps/idw_plots_",i,".Rdata"))
+  }
 }
 
 

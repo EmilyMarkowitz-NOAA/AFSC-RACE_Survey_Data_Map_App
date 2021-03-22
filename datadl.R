@@ -1,6 +1,8 @@
 
+rm(list = ls())
 
 
+source("functions.R") # App-specific files
 
 
 files <- c(
@@ -95,56 +97,43 @@ dat_cpue <- dat_cpue0 %>%
                                             survey == "EBS" ~ "shp_ebs",  
                                             survey == "GOA" ~ "shp_goa",  
                                             survey == "NBS" ~ "shp_nbs")) %>%
+  dplyr::mutate(common0 = common) %>%
   dplyr::mutate(common = str_to_sentence(common)) %>%
   dplyr::mutate(survey_num = as.numeric(factor(survey))) %>% 
   data.frame()
 
-dat_cpue$wtcpue[is.na(dat_cpue$wtcpue)] <- 0
-dat_cpue$numcpue[is.na(dat_cpue$numcpue) | dat_cpue$numcpue == -9999] <- 0
-dat_cpue <- dat_cpue[!(is.na(dat_cpue$year)), ]
+dat_cpue$common <- gsub(pattern = "unid.", replacement = "(unidentified)", x = dat_cpue$common, ignore.case = TRUE)
 
-# dat_cpue$label <- 'expression(paste(
-#   "Station): ", dat_cpue$station,  "
-#   
-#   Stratum: ", dat_cpue$stratum, "
-#   
-#   Latitude (",degree,"N)): ", dat_cpue$latitude, "
-#   
-#   Longitude (",degree,"W)): ", dat_cpue$latitude, "
-#   
-#   Date Surveyed: ", dat_cpue$datetime, "
-#   
-#   **Environmental Variables:**
-#   
-#   Bottom Temperature (",degree,"C): ", dat_cpue$bot_temp, "
-#   
-#   Surface Temperature (",degree,"C): ", dat_cpue$surf_temp, "
-#   
-#   Average Depth (m): ",  dat_cpue$bot_depth, "
-#   
-#   **CPUE of ", dat_cpue$common, "(",dat_cpue$scientific, ")**" ,":
-#   
-#   Number CPUE (kg of fish/ha): ",  dat_cpue$wtcpue, "
-#   
-#   Weight CPUE (Number of fish/ha): ",  dat_cpue$numcpue)) '
-  
+dat_cpue <- dat_cpue[!(is.na(dat_cpue$year)), ] # extra rows from .csv files
+# dat_cpue$wtcpue[is.na(dat_cpue$wtcpue)] <- 0
+dat_cpue$wtcpue[dat_cpue$wtcpue == -9999] <- NA
+dat_cpue$numcpue[#is.na(dat_cpue$numcpue) | 
+  dat_cpue$numcpue == -9999] <- NA
+dat_cpue$bot_temp[dat_cpue$bot_temp == -9999] <- NA
+dat_cpue$bot_depth[dat_cpue$bot_depth == -9999] <- NA
+dat_cpue$surf_temp[dat_cpue$surf_temp == -9999] <- NA
+
+
 # Set breaks for all years for each species
 for (i in 1:length(unique(dat_cpue$common))) {
   
   df <- dat_cpue %>%
     filter(common == unique(dat_cpue$common)[i])
   
-  n.breaks <- 6
+  n.breaks <- 5
   
-  var <- c("wtcpue", "numcpue", "bot_temp", "bot_depth", "surf_temp")
-  
+  var <- c("wtcpue", "numcpue", 
+           "bot_temp", "bot_depth", "surf_temp")
+
   code_str <- glue::glue(
-    'dat_cpue${var}_breaks <- paste0("c(", 
-                                   paste(quantile(x = df${var}, 
-                                     na.rm = TRUE, 
-                                     probs = c((1:(n.breaks-1))/n.breaks)), collapse = ", "), ")")
+    'dat_cpue${var}_breaks[dat_cpue$common == unique(dat_cpue$common)[i]] <-
+      paste0("c(",
+             paste(quantile(x = dat_cpue${var}[dat_cpue$common == unique(dat_cpue$common)[i]],
+                            na.rm = TRUE,
+                            probs = c((1:(n.breaks-1))/n.breaks)), collapse = ", "), ")")
     
     ')
+  
   eval(parse(text = code_str))
   
 }

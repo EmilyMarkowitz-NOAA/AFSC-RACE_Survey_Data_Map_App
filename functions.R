@@ -285,8 +285,8 @@ make_idw_map0 <-
                        ymn = 54, ymx = 68)
       }
       if (region %in% c("bs.north", "nbs")) {
-        extrap.box = c(xmn = -179.5, xmx = -157, 
-                       ymn = 60, ymx = 68)
+        extrap.box = c(xmn = -176.5, xmx = -160, 
+                       ymn = 58, ymx = 66)
       } 
     }
     
@@ -298,20 +298,33 @@ make_idw_map0 <-
                                                       set.crs = out.crs)
     }
     x <- sf::st_as_sf(x, coords = c(x = "LONGITUDE", y = "LATITUDE"), 
-                      crs = sf::st_crs(in.crs)) %>% sf::st_transform(crs = map_layers$crs)
-    idw_fit <- gstat::gstat(formula = CPUE_KGHA ~ 1, locations = x, 
+                      crs = sf::st_crs(in.crs)) %>% 
+      sf::st_transform(crs = map_layers$crs)
+    idw_fit <- gstat::gstat(formula = CPUE_KGHA ~ 1, 
+                            locations = x, 
                             nmax = idw.nmax)
     stn.predict <- predict(idw_fit, x)
     sp_extrap.raster <- raster::raster(xmn = extrap.box["xmn"], 
-                                       xmx = extrap.box["xmx"], ymn = extrap.box["ymn"], 
-                                       ymx = extrap.box["ymx"], ncol = (extrap.box["xmx"] - 
-                                                                          extrap.box["xmn"])/grid.cell, nrow = (extrap.box["ymx"] - 
-                                                                                                                  extrap.box["ymn"])/grid.cell, crs = crs(in.crs)) %>% 
-      projectRaster(crs = crs(x))
-    extrap.grid <- predict(idw_fit, as(sp_extrap.raster, "SpatialPoints")) %>% 
-      sf::st_as_sf() %>% sf::st_transform(crs = crs(x)) %>% 
-      stars::st_rasterize() %>% sf::st_join(map_layers$survey.area, 
-                                            join = st_intersects)
+                                       xmx = extrap.box["xmx"], 
+                                       ymn = extrap.box["ymn"], 
+                                       ymx = extrap.box["ymx"], 
+                                       ncol = (extrap.box["xmx"] - 
+                                                 extrap.box["xmn"])/grid.cell, 
+                                       nrow = (extrap.box["ymx"] - 
+                                                 extrap.box["ymn"])/grid.cell, 
+                                       crs = crs(in.crs)) 
+    if (as.character(crs(x)) != as.character(crs(sp_extrap.raster))) {
+      sp_extrap.raster <- sp_extrap.raster %>% 
+        projectRaster(crs = crs(x))
+    }
+    extrap.grid <- predict(idw_fit, 
+                           as(sp_extrap.raster, "SpatialPoints")) %>% 
+      sf::st_as_sf() %>% 
+      sf::st_transform(crs = crs(x)) %>% 
+      stars::st_rasterize() %>% 
+      sf::st_join(map_layers$survey.area, 
+                  join = st_intersects)
+    
     if (return.continuous.grid) {
       continuous.grid <- extrap.grid
     } else {
@@ -335,28 +348,54 @@ make_idw_map0 <-
     if (max(set.breaks) < max(stn.predict$var1.pred)) {
       set.breaks[length(set.breaks)] <- max(stn.predict$var1.pred) + 1
     }
+    
     dig.lab <- 7
-    set.levels <- cut(stn.predict$var1.pred, set.breaks, right = TRUE, 
+    set.levels <- cut(x = stn.predict$var1.pred, set.breaks, right = TRUE, 
                       dig.lab = dig.lab)
-    if (alt.round > 0) {
-      while (dig.lab > alt.round) {
-        dig.lab <- dig.lab - 1
-        set.levels <- cut(stn.predict$var1.pred, set.breaks, 
-                          right = TRUE, dig.lab = dig.lab)
-      }
-    }
-    else {
-      while (length(grep("\\.", set.levels)) > 0) {
-        dig.lab <- dig.lab - 1
-        set.levels <- cut(stn.predict$var1.pred, set.breaks, 
-                          right = TRUE, dig.lab = dig.lab)
-      }
-    }
-    extrap.grid$var1.pred <- cut(extrap.grid$var1.pred, set.breaks, 
-                                 right = TRUE, dig.lab = dig.lab)
-    sig.dig <- round(set.breaks[which(nchar(round(set.breaks)) >= 
-                                        4)])
-    make_level_labels <- function(vec) {
+    
+    # if (alt.round > 0) {
+    #   while (dig.lab > alt.round) {
+    #     dig.lab <- dig.lab - 1
+    #     set.levels <- cut(x = stn.predict$var1.pred,
+    #                       breaks = set.breaks,
+    #                       right = TRUE,
+    #                       dig.lab = dig.lab)
+    #   }
+    # } else {
+    #   while (length(grep("\\.", set.levels)) > 0) {
+    #     dig.lab <- dig.lab - 1
+    #     print(dig.lab)
+    #     set.levels <- base::cut(x = stn.predict$var1.pred,
+    #                       breaks = set.breaks,
+    #                       right = TRUE,
+    #                       dig.lab = dig.lab)
+    #   }
+    # }
+    
+    # if (alt.round > 0) {
+    #   while (dig.lab > alt.round) {
+    #     dig.lab <- dig.lab - 1
+    #     set.levels <- cut(stn.predict$var1.pred, set.breaks, 
+    #                       right = TRUE, dig.lab = dig.lab)
+    #   }
+    # }
+    # else {
+    #   while (length(grep("\\.", set.levels)) > 0) {
+    #     dig.lab <- dig.lab - 1
+    #     # print(dig.lab)
+    #     set.levels <- cut(stn.predict$var1.pred, set.breaks, 
+    #                       right = TRUE, dig.lab = dig.lab)
+    #   }
+    # }
+    
+    extrap.grid$var1.pred <- cut(extrap.grid$var1.pred, 
+                                 set.breaks, 
+                                 right = TRUE, 
+                                 dig.lab = dig.lab)
+    
+    sig.dig <- round(set.breaks[which(nchar(round(set.breaks)) >= 4)])
+    
+    make_level_labels <- function(vec, sig.dig) {
       vec <- as.character(vec)
       vec[grep("-1", vec)] <- "No catch"
       vec <- sub("\\(", "\\>", vec)
@@ -370,20 +409,30 @@ make_idw_map0 <-
       }
       return(vec)
     }
-    extrap.grid$var1.pred <- factor(make_level_labels(extrap.grid$var1.pred), 
-                                    levels = make_level_labels(levels(set.levels)))
+    
+    extrap.grid$var1.pred <- factor(make_level_labels(vec = extrap.grid$var1.pred, sig.dig), 
+                                    levels = make_level_labels(levels(set.levels), sig.dig))
+    
     n.breaks <- length(levels(set.levels))
+    
     p1 <- ggplot() + 
       geom_sf(data = map_layers$survey.area, fill = NA) + 
       geom_stars(data = extrap.grid) + 
       geom_sf(data = map_layers$survey.area, 
               fill = NA) + 
-      geom_sf(data = map_layers$akland, fill = "grey80") + 
+      # geom_sf(data = map_layers$akland$geometry[2],
+      #         fill = "grey80") +
+      geom_sf(data = map_layers$akland,
+              fill = "grey80") +
+      # geom_sf(data = sf::st_shift_longitude(sf::st_shift_longitude(map_layers$akland$geometry[1])),
+      #         fill = "grey80") +
+      # geom_sf(data = sf::st_wrap_dateline(map_layers$akland),
+      #         fill = "grey80") +
       geom_sf(data = map_layers$bathymetry) + 
       geom_sf(data = map_layers$graticule, 
               color = alpha("grey70", 0.3)) + 
       scale_fill_manual(name = paste0(key.title, "\nCPUE (kg/ha)"), 
-                        values = c("white", RColorBrewer::brewer.pal(9, name = "Blues")[c(2, 4, 6, 8, 9)]), 
+                        values = c("white", RColorBrewer::brewer.pal(9, name = "Blues")[c(2, 4, 6, 8, 9)]),
                         na.translate = FALSE, 
                         drop = FALSE) + 
       scale_x_continuous(breaks = map_layers$lon.breaks) + 
@@ -426,6 +475,7 @@ get_base_layers0 <-
     }
     akland <- sf::st_read(system.file("data", "ak_russia.shp", 
                                       package = "akgfmaps"), quiet = TRUE)
+
     bathymetry <- sf::st_read(system.file("data", "npac_0-200_meters.shp", 
                                           package = "akgfmaps"), quiet = TRUE)
     if (select.region %in% c("bs.south", "sebs")) {
@@ -452,9 +502,10 @@ get_base_layers0 <-
       survey.strata <- sf::st_read(system.file("data", 
                                                "ebs_strata.shp", package = "akgfmaps"), 
                                    quiet = TRUE)
+
       plot.boundary <- akgfmaps::transform_data_frame_crs(data.frame(
         x = c(-177.8, -154.7), 
-        y = c(63.15, 65.1)), 
+        y = c(54, 65.1)), 
         out.crs = set.crs)
       graticule <- st_graticule(lat = seq(54, 68, 2), 
                                 lon = seq(-180, -140, 5), 
@@ -472,10 +523,16 @@ get_base_layers0 <-
                                    quiet = TRUE) %>% 
         dplyr::filter(STRATUM %in% c(70, 71, 81))
       
-      plot.boundary <- akgfmaps::transform_data_frame_crs(data.frame(x = c(-177.3, -160), 
-                                                                     y = c(60, 66)), out.crs = set.crs)
-      graticule <- st_graticule(lat = seq(64, 68, 2), lon = seq(-180, 
-                                                                -140, 5), margin = 1e-05)
+      plot.boundary <- akgfmaps::transform_data_frame_crs(data.frame(
+        # x = c(-177.8, -154.7), 
+        # y = c(63.15, 65.1)), 
+        x = c(-176.5, -160), 
+        y = c(60, 66)), 
+        out.crs = set.crs)
+      
+      graticule <- st_graticule(lat = seq(64, 68, 2), 
+                                lon = seq(-180, -140, 5), 
+                                margin = 1e-05)
       lon.breaks <- seq(-180, -154, 5)
       lat.breaks <- seq(64, 66, 2)
     }
@@ -518,8 +575,8 @@ get_base_layers0 <-
     survey.area <- survey.area %>% sf::st_transform(crs = set.crs)
     survey.strata <- survey.strata %>% sf::st_transform(crs = set.crs)
     bathymetry <- bathymetry %>% sf::st_transform(crs = set.crs)
-    place.labels <- read.csv(file = system.file("data", 
-                                                "placenames.csv", package = "akgfmaps")) %>% 
+    place.labels <- read.csv(file = system.file("data",
+                                                "placenames.csv", package = "akgfmaps")) %>%
       dplyr::filter(region == select.region) %>% akgfmaps::transform_data_frame_crs(out.crs = set.crs)
     return(list(akland = akland, survey.area = survey.area, survey.strata = survey.strata, 
                 bathymetry = bathymetry, place.labels = place.labels, 

@@ -14,6 +14,9 @@ ui.metadata <- function() {
       
       
       h2("Cite this tool"),
+      p(paste0('Data last updated ', lastdl,
+                              ' and this app was last updated ',
+                              format(Sys.Date(), format='%B %d %Y'),'.')), 
       p("CITE"),
       br(),
       

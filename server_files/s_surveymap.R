@@ -9,9 +9,11 @@ output$survey_leaflet <- renderLeaflet({
 
   a <- leaflet() %>%
     addTiles() %>%
-    setView(lat = 56.60, lng = -159.3, zoom = 5) 
+    setView(lat = 56.60, 
+            lng = -159.3, 
+            zoom = 4.5) 
   
-  # ADD STRATUM POLYGON?
+  # ADD STRATUM POLYGON? -----------------
   if (input$stratum) {
     
     df <- df0 %>%
@@ -30,12 +32,60 @@ output$survey_leaflet <- renderLeaflet({
   }
   
   
-  # ADD CPUE IDW
+  
+  # ADD ENV IDW ------------------
+  if (paste(input$env_unit) != "none") {
+    
+    leg_lab <- as.numeric(trimws(formatC(x = eval(parse(text = df[1, paste0(paste(input$env_unit), "_breaks")])), 
+                                         digits = 3, 
+                                         big.mark = ",")))
+    leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
+    
+    if (sum(unique(df$survey) %in% c("NBS", "EBS")) == 2) {
+      df$map_area[df$survey %in% c("NBS", "EBS")] <- "bs.all"
+      df$survey[df$survey %in% c("NBS", "EBS")] <- "BS"
+    }
+    
+    for (i in 1:length(unique(df$survey))) {
+      df1 <- df %>% 
+        dplyr::filter(survey == unique(df$survey)[i])
+      
+      pal <- viridis::viridis(n.breaks)
+      
+      idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
+                                     LATITUDE = df1$latitude,
+                                     LONGITUDE = df1$longitude,
+                                     CPUE_KGHA = as.numeric(unlist(df1[,paste(input$env_unit)])),
+                                     region = df1$map_area[1],
+                                     set.breaks = breaks,
+                                     out.crs = "+proj=longlat +datum=WGS84")
+      
+      idw1 <- idw0$extrapolation.grid
+      
+      a <- a %>%
+        leafem::addStarsImage(x = idw1,
+                              colors = pal,
+                              opacity = 0.8) 
+    }
+    
+    a <- a %>%
+      addLegend(position = "bottomleft", 
+                pal = pal, 
+                labels = leg_lab, 
+                values = as.numeric(breaks), #~df$wtcpue,
+                title = paste0(names(input$env_unit)),
+                opacity = 0.8)
+  }
+  
+  
+  
+  # ADD CPUE -------------
   if (paste(input$cpue_unit) != "none") {
     
     df <- df0[df0[,paste(input$cpue_unit)] > 0,]   
     breaks <- eval(parse(text = df[1, paste0(paste(input$cpue_unit), "_breaks")]))
     
+    # ***ADD CPUE IDW-------------
     if (paste(input$cpue_display) == "idw") {
       leg_lab <- as.numeric(trimws(formatC(x = breaks, 
                                            digits = 3, 
@@ -71,13 +121,14 @@ output$survey_leaflet <- renderLeaflet({
       }
       
       a <- a %>%
-          addLegend(position = "bottomright", 
+          addLegend(position = "bottomleft", 
                     pal = pal, 
                     labels = leg_lab, 
                     values = as.numeric(breaks), 
                     title = paste0(names(input$cpue_unit)),
                     opacity = 0.8)
       
+      # ***ADD CPUE PT-------------
     } else if (paste(input$cpue_display) == "pt") {
       
       df4 <- df %>% 
@@ -107,12 +158,12 @@ output$survey_leaflet <- renderLeaflet({
                         # "<strong><u>Survey Data</u></strong> ", "<br>",
                         "<strong>Station:</strong> ", df4$station, "<br>",
                         "<strong>Stratum:</strong> ", df4$stratum,  "<br>",
-                        "<strong>Latitude (°N):</strong> ", df4$latitude,  "<br>",
-                        "<strong>Longitude (°W):</strong> ", df4$longitude,  "<br>",
+                        "<strong>Latitude (&degN):</strong> ", df4$latitude,  "<br>",
+                        "<strong>Longitude (&degW):</strong> ", df4$longitude,  "<br>",
                         "<strong>Date Surveyed:</strong> ", df4$datetime,  "<br>",
                         # "<strong><u>Environmental Data</u></strong> ", "<br>",
-                        "<strong>Bottom Temperature (°C):</strong> ", df4$bot_temp,  "<br>",
-                        "<strong>Surface Temperature (°C):</strong> ", df4$surf_temp,  "<br>",
+                        "<strong>Bottom Temperature (&degC):</strong> ", df4$bot_temp,  "<br>",
+                        "<strong>Surface Temperature (&degC):</strong> ", df4$surf_temp,  "<br>",
                         "<strong>Average Depth (m):</strong> ", df4$bot_depth,  "<br>",
                         # "<strong><u>Species Data</u></strong> ", "<br>",
                         "<strong>Number CPUE (kg of fish/ha):</strong> ", df4$numcpue,  "<br>",
@@ -131,52 +182,8 @@ output$survey_leaflet <- renderLeaflet({
 
   }
   
-  
-  # ADD CPUE IDW
-  if (paste(input$env_unit) != "none") {
-
-    leg_lab <- as.numeric(trimws(formatC(x = eval(parse(text = df[1, paste0(paste(input$env_unit), "_breaks")])), 
-                                         digits = 3, 
-                                         big.mark = ",")))
-    leg_lab <- paste0(c(0, leg_lab[-length(leg_lab)]), " - ", leg_lab)
-    
-    if (sum(unique(df$survey) %in% c("NBS", "EBS")) == 2) {
-      df$map_area[df$survey %in% c("NBS", "EBS")] <- "bs.all"
-      df$survey[df$survey %in% c("NBS", "EBS")] <- "BS"
-    }
-    
-    for (i in 1:length(unique(df$survey))) {
-      df1 <- df %>% 
-        dplyr::filter(survey == unique(df$survey)[i])
-      
-      pal <- viridis::viridis(n.breaks)
-      
-      idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
-                                         LATITUDE = df1$latitude,
-                                         LONGITUDE = df1$longitude,
-                                         CPUE_KGHA = as.numeric(unlist(df1[,paste(input$env_unit)])),
-                                         region = df1$map_area[1],
-                                         set.breaks = breaks,
-                                         out.crs = "+proj=longlat +datum=WGS84")
-      
-      idw1 <- idw0$extrapolation.grid
-      
-      a <- a %>%
-        leafem::addStarsImage(x = idw1,
-                              colors = pal,
-                              opacity = 0.8) 
-    }
-    
-    a <- a %>%
-      addLegend(position = "bottomright", 
-                pal = pal, 
-                labels = leg_lab, 
-                values = as.numeric(breaks), #~df$wtcpue,
-                title = paste0(names(input$env_unit)),
-                opacity = 0.8)
-  }
-  
-  # ADD STATION POINTS?
+ 
+  # ADD STATION POINTS? ---------------------
   if (input$stat_points) {
     
     df4 <- dat_cpue %>% 
@@ -199,20 +206,20 @@ output$survey_leaflet <- renderLeaflet({
         lat = df4$latitude, 
         popup = paste("<strong>Station:</strong> ", df4$station, "<br>",
                       "<strong>Stratum:</strong> ", df4$stratum,  "<br>",
-                      "<strong>Latitude (°N):</strong> ", df4$latitude,  "<br>",
-                      "<strong>Longitude (°W):</strong> ", df4$longitude,  "<br>",
+                      "<strong>Latitude (&degN):</strong> ", df4$latitude,  "<br>",
+                      "<strong>Longitude (&degW):</strong> ", df4$longitude,  "<br>",
                       "<strong>Date Surveyed:</strong> ", df4$datetime,  "<br>",
-                      "<strong>Bottom Temperature (°C):</strong> ", df4$bot_temp,  "<br>",
-                      "<strong>Surface Temperature (°C):</strong> ", df4$surf_temp,  "<br>",
+                      "<strong>Bottom Temperature (&degC):</strong> ", df4$bot_temp,  "<br>",
+                      "<strong>Surface Temperature (&degC):</strong> ", df4$surf_temp,  "<br>",
                       "<strong>Average Depth (m):</strong> ", df4$bot_depth,  "<br>"), 
         radius = 2.5, 
         color = nmfspalette::nmfs_palette(palette = "urchin")(1),
         stroke = FALSE, 
         fillOpacity = 0.5) %>%
-      addLegend(position = "bottomright",
+      addLegend(position = "bottomleft",
                 colors = nmfspalette::nmfs_palette(palette = "urchin")(1),
                 labels = "Stations",
-                className = "circle",
+                # className = "circle",
                 opacity = 1)
   }
   
