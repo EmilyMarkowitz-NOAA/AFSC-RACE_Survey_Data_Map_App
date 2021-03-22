@@ -10,8 +10,8 @@ var_long <- c("CPUE (kg/ha)", "CPUE (number/ha)",
 
 yr <- unique(dat_cpue$year)
 survey <- c("NBS", "EBS", "BS")#, "All")
-common <- "Pacific halibut"
-# common <- unique(dat_cpue$common_name)
+# common <- "Pacific halibut"
+common <- unique(dat_cpue$common_name)
 comb1 <- expand.grid(var1, yr, survey, common)
 names(comb1) <- c("var", "yr", "survey", "common")
 
@@ -27,7 +27,8 @@ comb <- comb %>%
                 common = as.character(common)) %>%
   tibble()
 
-spp_idw <- list() 
+idw_list <- list() 
+plot_list <- list() 
 
 for (i in 1:nrow(comb)){
   
@@ -171,12 +172,20 @@ for (i in 1:nrow(comb)){
     
   }
 
+  temp1<-temp
+  temp1$plot <- NULL
+  idw_list <- c(idw_list, list(temp1))
+  temp1<-temp
+  temp1$idw <- NULL
+  plot_list <- c(plot_list, list(temp)) 
+
   # name stuff in your lists
-  spp_idw <- c(spp_idw, list(temp))
-  names(spp_idw)[i]<-filename
+  # spp_idw <- c(spp_idw, list(temp))
+  names(idw_list)[i]<-names(plot_list)[i]<-filename
   
   if ((i %% 100) == 0){
-    save(spp_idw, file = paste0("./maps/idw_plots_",i,".Rdata"))
+    save(idw_list, file = paste0("./maps/idw_list_",i,".Rdata"))
+    save(plot_list, file = paste0("./maps/plot_list_",i,".Rdata"))
   }
 }
 
