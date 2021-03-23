@@ -29,7 +29,7 @@ comb <- comb %>%
 
 plot_list <- list() 
 
-for (i in 1:nrow(comb)){
+for (i in 1901:nrow(comb)){
   
   print(i)
   
@@ -83,7 +83,7 @@ for (i in 1:nrow(comb)){
       df$map_area <- "bs.all"
     }
     
-    breaks <- round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1)
+    breaks <- unique(round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1))
     leg_lab <- as.numeric(trimws(formatC(x = breaks, #as.numeric(quantile(x_scaled)),
                                          digits = 3, #drop0trailing = TRUE,
                                          big.mark = ",")))
