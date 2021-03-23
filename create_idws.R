@@ -184,12 +184,18 @@ for (i in 1:nrow(comb)){
   # spp_idw <- c(spp_idw, list(temp))
   names(idw_list)[i]<-names(plot_list)[i]<-filename
   
-  if ((i %% 100) == 0){
-    idw_list0 <- idw_list[(i-99):i]
+  if ((i %% 100) == 0 ||
+      i == nrow(comb)) {
+    diff <- ifelse((i %% 100) == 0, 
+                   100, 
+                   i %% 100)
+    idw_list0 <- idw_list[(i-(diff-1)):i]
     save(idw_list0, file = paste0("./maps/idw_list_",i,".Rdata"))
-    plot_list0 <- plot_list[(i-99):i]
+    plot_list0 <- plot_list[(i-(diff-1)):i]
     save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
   }
 }
 
+i %% nrow(comb)
 
+for (i in 1)
