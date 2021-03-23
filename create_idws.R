@@ -11,7 +11,7 @@ var_long <- c("CPUE (kg/ha)", "CPUE (number/ha)",
 yr <- unique(dat_cpue$year)
 survey <- c("NBS", "EBS", "BS")#, "All")
 # common <- "Pacific halibut"
-common <- unique(dat_cpue$common_name)
+common <- unique(dat_cpue$common)
 comb1 <- expand.grid(var1, yr, survey, common)
 names(comb1) <- c("var", "yr", "survey", "common")
 
@@ -63,9 +63,6 @@ for (i in 1:nrow(comb)){
   }
   df <- df[!(is.na(df[,temp$var])),]
   
-  if (temp$survey %in% "BS"){
-    df$map_area <- "bs.all"
-  }
   
   filename <- paste0(temp$yr, "_", 
                      temp$survey,  "_", 
@@ -82,6 +79,10 @@ for (i in 1:nrow(comb)){
       ((temp$survey == "BS" & # and if eihter.... if BS and either NBS (common) or EBS are missing
       sum(unique(df$survey) %in% survey0) == 2) ||
       temp$survey == survey0) ) { # or if the survey needed is the one available in df
+    
+    if (temp$survey %in% "BS"){
+      df$map_area <- "bs.all"
+    }
     
     breaks <- round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1)
     leg_lab <- as.numeric(trimws(formatC(x = breaks, #as.numeric(quantile(x_scaled)),
@@ -184,8 +185,10 @@ for (i in 1:nrow(comb)){
   names(idw_list)[i]<-names(plot_list)[i]<-filename
   
   if ((i %% 100) == 0){
-    save(idw_list, file = paste0("./maps/idw_list_",i,".Rdata"))
-    save(plot_list, file = paste0("./maps/plot_list_",i,".Rdata"))
+    idw_list0 <- idw_list[(i-99):i]
+    save(idw_list0, file = paste0("./maps/idw_list_",i,".Rdata"))
+    plot_list0 <- plot_list[(i-99):i]
+    save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
   }
 }
 
