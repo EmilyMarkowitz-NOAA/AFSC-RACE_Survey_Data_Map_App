@@ -173,29 +173,42 @@ for (i in 1:nrow(comb)){
     
   }
 
-  temp1<-temp
-  temp1$plot <- NULL
-  idw_list <- c(idw_list, list(temp1))
-  temp1<-temp
-  temp1$idw <- NULL
-  plot_list <- c(plot_list, list(temp)) 
+  # temp1<-temp
+  # temp1$plot <- NULL
+  # idw_list <- c(idw_list, list(temp1))
+  # temp1<-temp
+  # temp1$idw <- NULL
+  plot_list <- c(plot_list, list(temp)) # temp1
 
   # name stuff in your lists
   # spp_idw <- c(spp_idw, list(temp))
-  names(idw_list)[i]<-names(plot_list)[i]<-filename
+  # names(idw_list)[i]<-
+    names(plot_list)[i]<-filename
   
   if ((i %% 100) == 0 ||
       i == nrow(comb)) {
     diff <- ifelse((i %% 100) == 0, 
                    100, 
                    i %% 100)
-    idw_list0 <- idw_list[(i-(diff-1)):i]
-    save(idw_list0, file = paste0("./maps/idw_list_",i,".Rdata"))
+    # idw_list0 <- idw_list[(i-(diff-1)):i]
+    # save(idw_list0, file = paste0("./maps/idw_list_",i,".Rdata"))
     plot_list0 <- plot_list[(i-(diff-1)):i]
     save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
+    
+    # idw_list <- list()
+    plot_list <- list()
   }
 }
 
-i %% nrow(comb)
+# compile complete file
+files<-list.files(path = "./maps/", 
+                  pattern = "plot_list_", 
+                  full.names = TRUE)
+idw_list <- list()
+for (i in 1:length(files)) {
+  load(files[i])
+  
+  plot_list <- c(plot_list, list(plot_list0)) 
+  names(plot_list)[i] <- filename
+}
 
-for (i in 1)
