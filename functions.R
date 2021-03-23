@@ -413,6 +413,7 @@ make_idw_map0 <-
     extrap.grid$var1.pred <- factor(make_level_labels(vec = extrap.grid$var1.pred, sig.dig), 
                                     levels = make_level_labels(levels(set.levels), sig.dig))
     
+    
     n.breaks <- length(levels(set.levels))
     
     p1 <- ggplot() + 

@@ -27,7 +27,6 @@ comb <- comb %>%
                 common = as.character(common)) %>%
   tibble()
 
-idw_list <- list() 
 plot_list <- list() 
 
 for (i in 1:nrow(comb)){
@@ -67,7 +66,7 @@ for (i in 1:nrow(comb)){
   filename <- paste0(temp$yr, "_", 
                      temp$survey,  "_", 
                      temp$var)
-  if (temp$var %in% c("wtcpue", "numcpue")){
+  if (temp$var %in% c("wtcpue", "numcpue")) {
     filename <- paste0(temp$yr, "_", 
                        temp$survey,  "_", 
                        temp$var,  "_", 
@@ -75,7 +74,7 @@ for (i in 1:nrow(comb)){
   }
   temp$filename <- filename
   
-  if (nrow(df) > 0 && # if there is no data in this dataset to make the idw with
+  if (nrow(df) > 2 && # if there is no (or very little; 2 is arbirtary) data in this dataset to make the idw with
       ((temp$survey == "BS" & # and if eihter.... if BS and either NBS (common) or EBS are missing
       sum(unique(df$survey) %in% survey0) == 2) ||
       temp$survey == survey0) ) { # or if the survey needed is the one available in df
@@ -118,7 +117,7 @@ for (i in 1:nrow(comb)){
     if (temp$var %in% c("wtcpue", "numcpue")) {
       pal <- nmfspalette::nmfs_palette(palette = "seagrass",
                                        reverse = TRUE)(spp_idw0$n.breaks)
-      pal <- c("white", pal[-1])
+      pal <- c((pal[-1]), "white")
       # pal <- pal[-length(pal)]
       # pal <- c("white", RColorBrewer::brewer.pal(9, name = "Greens")[c(2, 4, 6, 8, 9)])
       # pal <- pal[-length(pal)]
@@ -131,20 +130,50 @@ for (i in 1:nrow(comb)){
       pal_lab <- leg_lab
     }
     
+    spp_idw0 <- spp_idw0 %>%
+      akgfmaps::add_map_labels(region = df$map_area[1]) %>%
+      akgfmaps::change_fill_color(new.scheme = pal,
+                                  show.plot = TRUE)
+    
     spp_idw0$plot <- spp_idw0$plot + 
+      scale_color_manual(
+        name = paste0(ifelse(is.na(temp$common),
+                             paste0(temp$yr, " Survey"),
+                             paste0(temp$yr, " ", temp$common)),
+                      "\n", temp$var_long),
+        values  = pal, #levels(x = spp_idw0$extrapolation.grid$var1.pred),
+        labels = pal_lab
+      )
+      
+    spp_idw0$plot <- spp_idw0$plot + 
+      scale_color_discrete(
+        name = paste0(ifelse(is.na(temp$common),
+                             paste0(temp$yr, " Survey"),
+                             paste0(temp$yr, " ", temp$common)),
+                      "\n", temp$var_long),
+        # values = (pal), 
+        limits  = levels(x = spp_idw0$extrapolation.grid$var1.pred),
+        # limits = paste0(c("", rep_len(x = ">", 
+        #                               length.out = (length(pal_lab)-1))), 
+        #                 gsub(pattern = " - ", 
+        #                      replacement = "â€“", 
+        #                      x = pal_lab)),
+        labels = pal_lab)  
+    
+    levels(x = spp_idw0$extrapolation.grid$var1.pred) <- c("No Catch", leg_lab)
+    
+    
       scale_fill_manual(
         name = paste0(ifelse(is.na(temp$common), 
                              paste0(temp$yr, " Survey"), 
                              paste0(temp$yr, " ", temp$common)), 
-                      "\n", temp$var_long), 
-        labels = pal_lab,
-        values = pal) #%>% 
-      # akgfmaps::add_map_labels() #%>% 
-    # change_fill_color(new.scheme = pal, 
-    #                   show.plot = TRUE)
+                      "\n", temp$var_long),
+        values = (pal), 
+        # breaks = gsub(pattern = " - ", replacement = "â€“", x = pal_lab), 
+        labels = pal_lab)  
+
     
     temp$plot <- spp_idw0$plot
-    levels(x = spp_idw0$extrapolation.grid$var1.pred) <- c("No Catch", leg_lab)
     temp$idw <- spp_idw0$extrapolation.grid
     # ggplot() + geom_stars(data = temp$idw)
     
@@ -158,47 +187,24 @@ for (i in 1:nrow(comb)){
            units = 'in')")
     eval(parse(text = code_str))
     
-    # spp_idw0 %>% 
-    #   akgfmaps::create_map_file(file.prefix = filename, 
-    #                   file.path = "./maps/", 
-    #                   try.change_text_size = TRUE, # 12x9 is a pre-defined size
-    #                   width = 12, 
-    #                   height = 9, 
-    #                   units = "in", 
-    #                   res = 300, 
-    #                   bg = "transparent")
-    
-    # spp_idw0$plot # + theme(legend.position = "left")
-    
-    
   }
 
-  # temp1<-temp
-  # temp1$plot <- NULL
-  # idw_list <- c(idw_list, list(temp1))
-  # temp1<-temp
-  # temp1$idw <- NULL
-  plot_list <- c(plot_list, list(temp)) # temp1
-
-  # name stuff in your lists
-  # spp_idw <- c(spp_idw, list(temp))
-  # names(idw_list)[i]<-
-    names(plot_list)[i]<-filename
+  # Save yo' work
+  plot_list <- c(plot_list, list(temp)) 
+  names(plot_list)[i %% 100]<-filename
   
   if ((i %% 100) == 0 ||
       i == nrow(comb)) {
     diff <- ifelse((i %% 100) == 0, 
                    100, 
                    i %% 100)
-    # idw_list0 <- idw_list[(i-(diff-1)):i]
-    # save(idw_list0, file = paste0("./maps/idw_list_",i,".Rdata"))
     plot_list0 <- plot_list[(i-(diff-1)):i]
     save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
     
-    # idw_list <- list()
     plot_list <- list()
   }
 }
+
 
 # compile complete file
 files<-list.files(path = "./maps/", 
@@ -207,8 +213,9 @@ files<-list.files(path = "./maps/",
 idw_list <- list()
 for (i in 1:length(files)) {
   load(files[i])
-  
-  plot_list <- c(plot_list, list(plot_list0)) 
-  names(plot_list)[i] <- filename
+  idw_list0 <- sapply(plot_list0, "[[", c("idw") )
+  idw_list <- c(idw_list, idw_list0) 
+  names(idw_list)[i] <- filename
 }
 
+save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
