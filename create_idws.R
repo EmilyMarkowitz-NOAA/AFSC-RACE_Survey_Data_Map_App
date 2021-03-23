@@ -195,10 +195,10 @@ for (i in 1:nrow(comb)){
   
   if ((i %% 100) == 0 ||
       i == nrow(comb)) {
-    diff <- ifelse((i %% 100) == 0, 
-                   100, 
-                   i %% 100)
-    plot_list0 <- plot_list[(i-(diff-1)):i]
+    # diff <- ifelse((i %% 100) == 0, 
+    #                100, 
+    #                i %% 100)
+    plot_list0 <- plot_list#[(i-(diff-1)):i]
     save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
     
     plot_list <- list()
@@ -214,8 +214,21 @@ idw_list <- list()
 for (i in 1:length(files)) {
   load(files[i])
   idw_list0 <- sapply(plot_list0, "[[", c("idw") )
+  names(idw_list0)<-names(plot_list0)
   idw_list <- c(idw_list, idw_list0) 
-  names(idw_list)[i] <- filename
 }
 
-save(plot_list0, file = paste0("./maps/plot_list_",i,".Rdata"))
+for (i in 1:length(idw_list)){
+  if (class(idw_list[i][[1]]) == "stars") {
+    idw_list[i][[1]] <- st_transform(x = idw_list[i][[1]], crs = "+proj=longlat +datum=WGS84")
+  }
+}
+
+# sapply(idw_list, st_transform(x = ., crs = "+proj=longlat +datum=WGS84"))
+# 
+# purrr::lmap(idw_list, st_transform(x = ., crs = "+proj=longlat +datum=WGS84"))
+
+# idw_list0[77]
+# a<-idw_list0[77][[1]]; ggplot() + geom_stars(data = st_transform(a, "+proj=longlat +datum=WGS84"))
+
+save(idw_list, file = paste0("./maps/idw_list.Rdata"))
