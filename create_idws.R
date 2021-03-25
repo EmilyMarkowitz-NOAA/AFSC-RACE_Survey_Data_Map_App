@@ -27,11 +27,8 @@ comb <- comb %>%
                 common = as.character(common)) %>%
   tibble()
 
-plot_list <- list() 
 
-for (i in 1901:nrow(comb)){
-  
-  print(i)
+make_plots_idws <- function(i, comb, dat_cpue) {
   
   temp <- list(idw = NA, 
                plot = NA, 
@@ -49,7 +46,7 @@ for (i in 1901:nrow(comb)){
   
   df <- dat_cpue %>%
     dplyr::filter(year == temp$yr &
-          survey %in% survey0) %>%
+                    survey %in% survey0) %>%
     dplyr::select("year", "wtcpue", "survey", "surf_temp", "stratum", 
                   "station", "scientific", "numcpue", "longitude", "latitude", 
                   # "datetime", 
@@ -76,8 +73,8 @@ for (i in 1901:nrow(comb)){
   
   if (nrow(df) > 2 && # if there is no (or very little; 2 is arbirtary) data in this dataset to make the idw with
       ((temp$survey == "BS" & # and if eihter.... if BS and either NBS (common) or EBS are missing
-      sum(unique(df$survey) %in% survey0) == 2) ||
-      temp$survey == survey0) ) { # or if the survey needed is the one available in df
+        sum(unique(df$survey) %in% survey0) == 2) ||
+       temp$survey == survey0) ) { # or if the survey needed is the one available in df
     
     if (temp$survey %in% "BS"){
       df$map_area <- "bs.all"
@@ -105,7 +102,7 @@ for (i in 1901:nrow(comb)){
     # region = df$map_area[1]
     # set.breaks = breaks
     # out.crs = "+proj=longlat +datum=WGS84"
-
+    
     spp_idw0 <- make_idw_map0(COMMON_NAME = df$common,
                               LATITUDE = df$latitude, 
                               LONGITUDE = df$longitude, 
@@ -144,34 +141,37 @@ for (i in 1901:nrow(comb)){
         values  = pal, #levels(x = spp_idw0$extrapolation.grid$var1.pred),
         labels = pal_lab
       )
-      
-    spp_idw0$plot <- spp_idw0$plot + 
-      scale_color_discrete(
-        name = paste0(ifelse(is.na(temp$common),
-                             paste0(temp$yr, " Survey"),
-                             paste0(temp$yr, " ", temp$common)),
-                      "\n", temp$var_long),
-        # values = (pal), 
-        limits  = levels(x = spp_idw0$extrapolation.grid$var1.pred),
-        # limits = paste0(c("", rep_len(x = ">", 
-        #                               length.out = (length(pal_lab)-1))), 
-        #                 gsub(pattern = " - ", 
-        #                      replacement = "â€“", 
-        #                      x = pal_lab)),
-        labels = pal_lab)  
     
-    levels(x = spp_idw0$extrapolation.grid$var1.pred) <- c("No Catch", leg_lab)
+    # spp_idw0$plot <- spp_idw0$plot + 
+    #   scale_color_discrete(
+    #     name = paste0(ifelse(is.na(temp$common),
+    #                          paste0(temp$yr, " Survey"),
+    #                          paste0(temp$yr, " ", temp$common)),
+    #                   "\n", temp$var_long),
+    #     # values = (pal), 
+    #     limits  = levels(x = spp_idw0$extrapolation.grid$var1.pred),
+    #     # limits = paste0(c("", rep_len(x = ">", 
+    #     #                               length.out = (length(pal_lab)-1))), 
+    #     #                 gsub(pattern = " - ", 
+    #     #                      replacement = "â€“", 
+    #     #                      x = pal_lab)),
+    #     labels = pal_lab)  
+    
+    levels(x = spp_idw0$extrapolation.grid$var1.pred) <- 
+      c(ifelse(temp$var %in% c("wtcpue", "numcpue"), 
+               "No Catch", ""), 
+        leg_lab)
     
     
-      scale_fill_manual(
-        name = paste0(ifelse(is.na(temp$common), 
-                             paste0(temp$yr, " Survey"), 
-                             paste0(temp$yr, " ", temp$common)), 
-                      "\n", temp$var_long),
-        values = (pal), 
-        # breaks = gsub(pattern = " - ", replacement = "â€“", x = pal_lab), 
-        labels = pal_lab)  
-
+    # scale_fill_manual(
+    #   name = paste0(ifelse(is.na(temp$common), 
+    #                        paste0(temp$yr, " Survey"), 
+    #                        paste0(temp$yr, " ", temp$common)), 
+    #                 "\n", temp$var_long),
+    #   values = (pal), 
+    #   # breaks = gsub(pattern = " - ", replacement = "â€“", x = pal_lab), 
+    #   labels = pal_lab)  
+    
     
     temp$plot <- spp_idw0$plot
     temp$idw <- spp_idw0$extrapolation.grid
@@ -189,9 +189,24 @@ for (i in 1901:nrow(comb)){
     
   }
 
+  
+  return(temp)
+}
+
+
+
+# Loop ----------------------
+plot_list <- list() 
+
+for (i in 2601:nrow(comb)){
+  
+  print(i)
+  
+  temp <- make_plots_idws(i, comb, dat_cpue)
+  
   # Save yo' work
   plot_list <- c(plot_list, list(temp)) 
-  names(plot_list)[i %% 100]<-filename
+  names(plot_list)[i %% 100]<-temp$filename
   
   if ((i %% 100) == 0 ||
       i == nrow(comb)) {
