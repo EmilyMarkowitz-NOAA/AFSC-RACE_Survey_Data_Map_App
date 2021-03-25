@@ -113,6 +113,10 @@ dat_cpue$bot_temp[dat_cpue$bot_temp == -9999] <- NA
 dat_cpue$bot_depth[dat_cpue$bot_depth == -9999] <- NA
 dat_cpue$surf_temp[dat_cpue$surf_temp == -9999] <- NA
 
+dat_cpue$common[is.na(dat_cpue$common)] <- 
+  dat_cpue$scientific[is.na(dat_cpue$common)]
+
+dat_cpue$common[is.na(dat_cpue$common)] <- NULL #any rows with remaining NA's in common can be deleted
 
 # Set breaks for all years for each species
 for (i in 1:length(unique(dat_cpue$common))) {

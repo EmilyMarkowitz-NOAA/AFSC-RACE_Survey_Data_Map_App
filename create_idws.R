@@ -83,7 +83,7 @@ for (i in 1:nrow(comb)){
       df$map_area <- "bs.all"
     }
     
-    breaks <- round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1)
+    breaks <- unique(round(eval(parse(text = df[1, paste0(paste(temp$var), "_breaks")])), digits = 1))
     leg_lab <- as.numeric(trimws(formatC(x = breaks, #as.numeric(quantile(x_scaled)),
                                          digits = 3, #drop0trailing = TRUE,
                                          big.mark = ",")))
@@ -218,17 +218,22 @@ for (i in 1:length(files)) {
   idw_list <- c(idw_list, idw_list0) 
 }
 
+# idw_list[77]
+# a<-idw_list[77][[1]]; ggplot() + geom_stars(data = st_transform(a, "+proj=longlat +datum=WGS84"))
+
+
 for (i in 1:length(idw_list)){
   if (class(idw_list[i][[1]]) == "stars") {
     idw_list[i][[1]] <- st_transform(x = idw_list[i][[1]], crs = "+proj=longlat +datum=WGS84")
   }
 }
 
+# a<-idw_list[77][[1]]; ggplot() + geom_stars(data = a)
+
 # sapply(idw_list, st_transform(x = ., crs = "+proj=longlat +datum=WGS84"))
 # 
 # purrr::lmap(idw_list, st_transform(x = ., crs = "+proj=longlat +datum=WGS84"))
 
-# idw_list0[77]
-# a<-idw_list0[77][[1]]; ggplot() + geom_stars(data = st_transform(a, "+proj=longlat +datum=WGS84"))
 
 save(idw_list, file = paste0("./maps/idw_list.Rdata"))
+save(idw_list, file = paste0("./data/idw_list.Rdata"))

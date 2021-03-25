@@ -36,6 +36,8 @@ ui.metadata <- function() {
       p(strong("Email: "), "[email]"), 
       p(strong("Telephone: "), "[phone number]"), 
       br(), 
+      p("Jeremy Mays or Nancy Robeson?"),
+      br(), 
       p("NOAA Fisheries, Alaska Fisheries Science Center"), 
       p("Resource Assessment and Conservation Engineering Division"), 
       p("7600 Sand Point Way NE, Bldg. 4"), 

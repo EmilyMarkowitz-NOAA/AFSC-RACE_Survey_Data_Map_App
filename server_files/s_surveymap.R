@@ -104,15 +104,33 @@ output$survey_leaflet <- renderLeaflet({
         
         pal <- nmfspalette::nmfs_palette(palette = "seagrass", reverse = TRUE)(length(breaks)+1)
 
-        idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
-                                           LATITUDE = df1$latitude,
-                                           LONGITUDE = df1$longitude,
-                                           CPUE_KGHA = as.numeric(unlist(df1[,paste(input$cpue_unit)])),
-                                           region = df1$map_area[1],
-                                           set.breaks = breaks,
-                                           out.crs = "+proj=longlat +datum=WGS84")
+        # idw0 <- akgfmaps::make_idw_map(COMMON_NAME = df1$common,
+        #                                    LATITUDE = df1$latitude,
+        #                                    LONGITUDE = df1$longitude,
+        #                                    CPUE_KGHA = as.numeric(unlist(df1[,paste(input$cpue_unit)])),
+        #                                    region = df1$map_area[1],
+        #                                    set.breaks = breaks,
+        #                                    out.crs = "+proj=longlat +datum=WGS84")
+        # 
+        # idw1 <- idw0$extrapolation.grid
+        surv <- input$survey
+        if (sum(surv %in% c("NBS", "EBS"))>2) {
+          surv <- c(surv,"BS")
+          surv <- surv[!(surv %in% c("NBS", "EBS"))]
+        }
+        idwidx1 <- grep(pattern = input$year, 
+                        x = names(idw_list), 
+                        ignore.case = TRUE)
+        idwidx2 <- unique(grep(paste(paste(input$survey),
+                                      collapse="|"), 
+                                names(idw_list),
+                                value=TRUE))
+        idwidx3 <- grep(pattern = input$spp, 
+                        x = names(idw_list)[1], 
+                        ignore.case = TRUE)
         
-        idw1 <- idw0$extrapolation.grid
+        
+        idw1 <- idw_list[idwidx]
         
         a <- a %>%
           leafem::addStarsImage(x = idw1,

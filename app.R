@@ -19,12 +19,14 @@
 
 # rm(list = ls())
 
-# input <- list(year = 2019,
+# input <- list(#year = 2019,
+#               year = 2000,
 #               survey = c("NBS", "EBS"),
 # #               spp = "Pacific halibut",
-#               spp = "Nudibranch (unidentified)",
-# #               cpue_unit = list("kg of fish/ha" = "wtcpue"),
-#               cpue_unit = list("Number of fish/ha" = "numcpue"),
+#               # spp = "Nudibranch (unidentified)",
+#               spp = "Octopus (unidentified)",
+#               cpue_unit = list("kg of fish/ha" = "wtcpue"),
+#               # cpue_unit = list("Number of fish/ha" = "numcpue"),
 #               cpue_display = list("Sized points" = "pt"),
 #               env_unit = list("None" = "none"),
 #               stratum = TRUE,
