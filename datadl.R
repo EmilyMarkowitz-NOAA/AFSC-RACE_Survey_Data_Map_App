@@ -118,6 +118,11 @@ dat_cpue$common[is.na(dat_cpue$common)] <-
 
 dat_cpue$common[is.na(dat_cpue$common)] <- NULL #any rows with remaining NA's in common can be deleted
 
+dat_cpue$common[is.na(dat_cpue$common)] <- 
+  dat_cpue$scientific[is.na(dat_cpue$common)]
+
+dat_cpue$common[is.na(dat_cpue$common)] <- NULL #any rows with remaining NA's in common can be deleted
+
 # Set breaks for all years for each species
 for (i in 1:length(unique(dat_cpue$common))) {
   
