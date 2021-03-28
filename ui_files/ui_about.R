@@ -7,6 +7,7 @@ ui.about <- function() {
       HTML("<html lang='en'>"), #Always have this as your first line
       
       h1("Surveys Conducted in Alaska by AFSC"), 
+      p("For general exploration... for more specific needs or collaboration, please contact..."),
       br(),
       h2("Northern and Eastern Bering Sea"), 
       br(), 

@@ -7,6 +7,10 @@ https://apps-afsc.fisheries.noaa.gov/RACE/groundfish/survey_data/default.htm
 # data
 https://apps-afsc.fisheries.noaa.gov/RACE/groundfish/survey_data/data.htm
 
+# Shapefiles -------------------------------------------------------------------
+
+# AI/GOA Shapefiles
+# U:\alaska\hypsography
 
 
 # Other survey apps ------------------------------------------------------------
@@ -19,9 +23,12 @@ https://alaskafisheries.noaa.gov/mapping/CIA_Mapping/?analysisType=SimpleFisheri
 
 # Daily heatmap bottom temperature ---------------------------------------------
 
-# map scripts
-G:\EBSother\EBS2019\HeatMapR
+# 1. add this functionality to shiny app and 
+# 2. fix this code so Liz can use this
 
+# map scripts
+G:\EBSother\EBS2019\HeatMapR # DO NOT TOUCH
+G:\EBSother\EBS2021\HeatMapR # EDIT THIS
 # webstory
 https://www.fisheries.noaa.gov/feature-story/2019-southeastern-bering-sea-shelf-bottom-trawl-survey-gets-underway
 
