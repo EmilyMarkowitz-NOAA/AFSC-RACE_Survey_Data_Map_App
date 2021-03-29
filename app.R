@@ -19,12 +19,13 @@
 
 # rm(list = ls())
 
-# input <- list(#year = 2019,
-#               year = 2000,
-#               survey = c("NBS", "EBS"),
-# #               spp = "Pacific halibut",
-#               # spp = "Nudibranch (unidentified)",
-#               spp = "Octopus (unidentified)",
+# input <- list(year = 2019,
+#               # year = 2000,
+#               survey = c("EBS"),
+#               # survey = c("NBS", "EBS"),
+#               # common = "Pacific halibut",
+#               # common = "Nudibranch (unidentified)",
+#               common = "Pacific ocean perch",
 #               cpue_unit = list("kg of fish/ha" = "wtcpue"),
 #               # cpue_unit = list("Number of fish/ha" = "numcpue"),
 #               cpue_display = list("Sized points" = "pt"),

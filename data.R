@@ -36,6 +36,12 @@ lastdl <- ageoffile(here::here("data", "publicdata", "all_data.Rdata"))
 
 load(file = paste0("./data/idw_list.Rdata"))
 
+names(idw_list) <- gsub(pattern = "\\(", 
+                        replacement = "", 
+                        x = names(idw_list))
+names(idw_list) <- gsub(pattern = "\\)", 
+                        replacement = "", 
+                        x = names(idw_list))
 
 
 

@@ -35,11 +35,11 @@ ui.surveymap <- function() {
                                     step = 1, 
                                     sep = "",
                                     animate = TRUE),
-                        selectInput("spp", "Species", 
+                        selectInput("common", "Species", 
                                     choices = c(sort(unique(dat_cpue$common))), 
                                     selected = "Pacific halibut"),
                         selectInput("survey", "Survey", 
-                                    choices = c(sort(unique(dat_cpue$survey))), 
+                                    choices = c(sort(c("BS", unique(dat_cpue$survey)))), 
                                     selected = c("EBS", "NBS"), 
                                     multiple = TRUE),
                         fluidRow(
@@ -71,7 +71,12 @@ ui.surveymap <- function() {
                                       value = TRUE), 
 
                         downloadButton(outputId = "dl_map", 
-                                       label = "Download Map (PNG)")
+                                       label = "Download Map (PNG)"), 
+                        
+                        br(),
+                        br(),
+                        # verbatimTextOutput
+                        textOutput("latlon")
                         
                         # leafletOutput("survey_leaflet")                                            conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
                         # Only prompt for threshold when coloring or sizing by superzip

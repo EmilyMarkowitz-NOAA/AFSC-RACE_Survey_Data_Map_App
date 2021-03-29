@@ -226,20 +226,142 @@ files<-list.files(path = "./maps/",
                   pattern = "plot_list_", 
                   full.names = TRUE)
 idw_list <- list()
-for (i in 1:length(files)) {
+# plot_list <- list()
+for (i in 1:(length(files)-1)) {
   load(files[i])
-  idw_list0 <- sapply(plot_list0, "[[", c("idw") )
+  
+  # names(plot_list0)<-names(plot_list0)
+  # plot_list <- c(plot_list, plot_list0)   
+  
+  idw_list0 <- sapply(plot_list0, "[", c("idw") )
+  # idw_list0 <- sapply(plot_list0, "[[", c("idw") )
   names(idw_list0)<-names(plot_list0)
-  idw_list <- c(idw_list, idw_list0) 
+  idw_list <- c(idw_list, idw_list0)
 }
+save(idw_list, file = paste0("./maps/idw_list0.Rdata"))
+
 
 # idw_list[77]
 # a<-idw_list[77][[1]]; ggplot() + geom_stars(data = st_transform(a, "+proj=longlat +datum=WGS84"))
 
+# Fix IDWS --------------------------------------------------------------------
+
+# load(file = paste0("./maps/idw_list0.Rdata"))
+
+akland <- sf::st_read(system.file("data", "ak_russia.shp",
+                                  package = "akgfmaps"), quiet = TRUE)
+sps <- sf::st_transform(x = akland,
+                        crs = "+proj=longlat +datum=WGS84")
+sps <- sf::as_Spatial(st_geometry(sps), 
+                      IDs = as.character(1:nrow(sps)))
 
 for (i in 1:length(idw_list)){
+    print(i)
   if (class(idw_list[i][[1]]) == "stars") {
-    idw_list[i][[1]] <- st_transform(x = idw_list[i][[1]], crs = "+proj=longlat +datum=WGS84")
+    
+    idw1 <- idw_list[i][[1]]
+    idw1 <-  sf::st_transform(x = idw1,
+                              crs = "+proj=longlat +datum=WGS84")
+    
+    leg_lab <- leg_lab0 <- levels(x = idw1$var1.pred)
+    pal <- nmfspalette::nmfs_palette(palette = "seagrass", 
+                                     reverse = TRUE)(length(leg_lab))
+    
+    if (length(grep(x = unique(idw1$var1.pred), pattern = "0 - ")) > 0) {
+      
+      leg_lab[leg_lab == "0 - 0"] <- "<0.001"
+      
+      leg_lab[grep(pattern = "0 - ", x = leg_lab)] <- gsub(pattern = "0 - ", 
+                                                           replacement = "0.001 - ", 
+                                                           x = leg_lab[grep(pattern = "0 - ", x = leg_lab)])
+      
+      levels(x = idw1$var1.pred) <- leg_lab
+    }
+    
+    # idw <- data.frame(idw1)
+    # idw$var1.pred <- paste(idw$var1.pred) # get rid of factor class
+    # idw <- left_join(x = idw, 
+    #                  y = data.frame(var1.pred = c(leg_lab), 
+    #                                 color = pal))
+    # idw <- idw[idw$var1.pred != "NA",]
+    # leg_lab <- unique(idw$var1.pred)
+    # 
+    # library(concaveman)
+    # idw <- idw %>%
+    #   st_as_sf(coords = c("x", "y"), 
+    #            crs = "+proj=longlat +datum=WGS84")
+    # 
+    # poly <- list()
+    # for (ii in 1:length(leg_lab)){
+    #   pnts <- idw %>%
+    #     dplyr::filter(var1.pred == leg_lab[ii])
+    #   
+    #   poly0 <- concaveman(points = pnts, concavity = 1.1)
+    # 
+    #   # plot(poly, reset = FALSE)
+    #   # plot(pnts, add = TRUE)
+    #   non_overlaps <- st_intersection(s5) %>%
+    #     filter(n.overlaps == 1)
+    #   
+    #   plot(non_overlaps["polygon"])
+    #   
+    #   
+    #   poly <- c(poly,
+    #             temp = list(poly0))
+    #   names(poly)[ii]<-leg_lab[ii]
+    # }
+    # idwp <- SpatialPolygons(Srl = poly,
+    #                        pO = 1:length(leg_lab),
+    #                        proj4string = crs(idw))
+    
+    
+    # idw <- st_contour(x = idw1, contour_lines = FALSE, na.rm = TRUE, breaks = leg_lab)
+    # idw <-st_to_sf(x = idw1,                   
+    #                   merge = TRUE, as_points = FALSE, 
+    #                 connect8 = TRUE, na.rm = FALSE)
+    # plot(idw, col = idw$color)
+    # ggplot() %>%
+    #   geom_polygon(data = idw, mapping = aes(color = color))
+    
+    
+    idw <- data.frame(idw1)
+    idw$var1.pred <- paste(idw$var1.pred) # get rid of factor class
+    idw <- left_join(x = idw, 
+                     y = data.frame(var1.pred = c(leg_lab), 
+                                    color = pal))
+    idw <- idw[idw$var1.pred != "NA",]
+    leg_lab <- unique(idw$var1.pred)
+    # pal <- nmfspalette::nmfs_palette(palette = "seagrass", 
+    #                                  reverse = TRUE)(length(leg_lab))
+
+    
+    
+
+    # # library(alphahull)
+    # poly <- list()
+    # for (ii in 1:length(leg_lab)){
+    #   a <- idw %>% 
+    #     dplyr::filter(var1.pred == leg_lab[ii])
+    #   p <- alphahull::ahull(a$x, a$y, alpha = .05)
+    #   # plot(p)
+    #   poly <- c(poly, 
+    #             temp = list(p))
+    #   names(poly)[ii]<-leg_lab[ii]
+    # }
+    # idwp <- SpatialPolygons(Srl = poly, 
+    #                        pO = 1:length(leg_lab), 
+    #                        proj4string = "+proj=longlat +datum=WGS84")
+    
+    sp::coordinates(idw) <- ~x+y
+    
+    crs(idw) <- "+proj=longlat +datum=WGS84"
+    
+    idw <- spatialEco::erase.point(idw, sps)    
+    
+
+    
+    
+    idw_list[i][[1]] <- idw
   }
 }
 
@@ -249,6 +371,12 @@ for (i in 1:length(idw_list)){
 # 
 # purrr::lmap(idw_list, st_transform(x = ., crs = "+proj=longlat +datum=WGS84"))
 
+# save(plot_list, file = paste0("./maps/plot_list.Rdata"))
+# save(plot_list, file = paste0("./data/plot_list.Rdata"))
 
 save(idw_list, file = paste0("./maps/idw_list.Rdata"))
-save(idw_list, file = paste0("./data/idw_list.Rdata"))
+file.copy(from = "./maps/idw_list.Rdata", 
+          to = "./data/idw_list.Rdata", 
+          overwrite = TRUE)
+
+# save(idw_list, file = paste0("./data/idw_list.Rdata"))

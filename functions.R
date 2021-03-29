@@ -48,6 +48,7 @@ PKG <- c(
   # Text Management
   "stringr",
   "htmltools", 
+  "htmlwidgets",
   
   # Spatial
   "akgfmaps", # devtools::install_github("sean-rohan-noaa/akgfmaps", build_vignettes = TRUE)
@@ -71,6 +72,8 @@ PKG <- c(
   "reshape", 
   "stars",
   "mapview",
+  "maptools", 
+  "spatialEco", 
   
   # Time
   # "lubridate",
