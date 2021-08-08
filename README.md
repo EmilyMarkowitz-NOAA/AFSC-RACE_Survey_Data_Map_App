@@ -1,7 +1,5 @@
 # AFSC Survey Data Map Visualizations (AFSCRACE_SurveyDataMapApp)
 
-Here are the basic files you need to create reproducible repeatable (e.g., annual) reports in R Markdown for AFSC Surveys! 
-
 > Code is still in development
 
 **Emily Markowitz** (Emily.Markowitz AT noaa.gov)
